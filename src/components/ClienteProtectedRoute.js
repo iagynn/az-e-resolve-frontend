@@ -1,16 +1,19 @@
+// src/components/ClienteProtectedRoute.js
+
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 const ClienteProtectedRoute = ({ children }) => {
-    // Verificamos se o token do cliente está guardado no localStorage
+    // 1. Pega o token do armazenamento local
     const token = localStorage.getItem('clienteToken');
 
+    // 2. Se NÃO houver token, redireciona para a página de login.
+    // O 'replace' impede o utilizador de voltar para a página protegida com o botão "Voltar" do navegador.
     if (!token) {
-        // Se NÃO houver token, redirecionamos para a página de login
-        return <Navigate to="/cliente/login" />;
+        return <Navigate to="/cliente/login" replace />;
     }
 
-    // Se houver um token, mostramos a página que está protegida (os children)
+    // 3. Se houver token, renderiza o componente filho (que é a página do dashboard).
     return children;
 };
 

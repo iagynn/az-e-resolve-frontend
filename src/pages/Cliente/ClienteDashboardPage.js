@@ -10,6 +10,10 @@ const ClienteDashboardPage = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+           // ==========================================================
+    // ==> ADICIONE APENAS ESTA LINHA DE TESTE <==
+    // ==========================================================
+    alert('SE ESTA MENSAGEM APARECER, O USEEFFECT ESTÁ A FUNCIONAR!');
         // Função para buscar os dados
         const fetchPedidos = async () => {
             // Pega o token do localStorage
@@ -22,7 +26,7 @@ const ClienteDashboardPage = () => {
             }
 
             try {
-                const response = await fetch('http://localhost:3000/api/cliente/pedidos', {
+                const response = await fetch('http://localhost:3000/api/portal-cliente/pedidos', {
                     headers: {
                         // Enviamos o token no cabeçalho para provar quem somos
                         'Authorization': `Bearer ${token}`

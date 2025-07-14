@@ -1632,78 +1632,75 @@ export default function App() {
         </RouterNavLink>
     );
 
-  return (
+ return (
     <BrowserRouter>
-      <Routes>
-        {/* ROTAS PÚBLICAS E DO CLIENTE (sem a sidebar do admin) */}
-        <Route path="/status/:publicId" element={<StatusPedidoPage />} />
-        <Route path="/cliente/login" element={<ClienteLoginPage />} />
-        <Route path="/ativar-conta/:token" element={<AtivarContaPage />} />
-          {/* ROTAS PROTEGIDAS DO CLIENTE */}
-    <Route path="/cliente/dashboard" element={<ClienteProtectedRoute>...</ClienteProtectedRoute>} />
-    <Route path="/cliente/pedidos/:id" element={<ClienteProtectedRoute>...</ClienteProtectedRoute>} />
-        <Route 
-            path="/cliente/dashboard" 
-            element={
-                <ClienteProtectedRoute>
-                    <ClienteDashboardPage />
-                </ClienteProtectedRoute>
-            } 
-        />
-<Route 
-        path="/cliente/pedidos/:id" 
-        element={<ClienteProtectedRoute><PedidoDetalheClientePage /></ClienteProtectedRoute>} 
-    />
-        {/* ROTA "APANHA-TUDO" PARA O PAINEL DE ADMINISTRAÇÃO */}
-        {/* Qualquer URL que não seja as de cima, vai cair aqui */}
-        <Route path="/*" element={
-            // O layout principal do painel vai aqui dentro do "element"
-            <div className="flex h-screen bg-gray-100 font-sans">
-              <aside className={`bg-white text-gray-800 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
-                  {/* ...código da sua sidebar... */}
-                  {/* PROVAVELMENTE O SEU CÓDIGO ATUAL ESTÁ ASSIM: */}
-{/* CÓDIGO CORRIGIDO */}
-<div className="flex items-center justify-between p-4 border-b">
-  <h1 className={`text-xl font-bold text-blue-700 ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1>
-  
-  <button 
-      onClick={() => setIsSidebarOpen(!isSidebarOpen)}  // <-- ADICIONADO
-      className="p-2 rounded-lg hover:bg-gray-200"
-  >
-      {/* LÓGICA DO ÍCONE ADICIONADA */}
-      {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-  </button>
-</div>
-                  <nav className="mt-6 px-4 space-y-2">
-                      <NavLink to="/" label="Dashboard" icon={LayoutDashboard} />
-                      <NavLink to="/pedidos" label="Pedidos" icon={List} />
-                      <NavLink to="/agenda" label="Agenda" icon={Calendar} />
-                      <NavLink to="/financeiro" label="Financeiro" icon={Wallet} />
-                      <NavLink to="/estoque" label="Estoque" icon={Archive} />
-                      <NavLink to="/clientes" label="Clientes" icon={Users} />
-                      <NavLink to="/configuracoes" label="Configurações" icon={Settings} />
-                  </nav>
-              </aside>
-              <main className="flex-1 flex flex-col overflow-hidden">
-                  {/* ...código do seu header... */}
-                  <div className="flex-1 p-6 overflow-y-auto">
-                      {/* ROTAS ANINHADAS - Só para as páginas DENTRO do painel */}
-                      <Routes>
-                          {/* CORRIGIDO: A rota para o Dashboard é path="/" */}
-                          <Route path="/" element={<DashboardPage />} />
-                          <Route path="/pedidos" element={<PedidosPage onPedidoClick={handlePedidoClick} />} />
-                          <Route path="/clientes" element={<ClientesPage />} />
-                          <Route path="/agenda" element={<AgendaPage />} />
-                          <Route path="/financeiro" element={<FinanceiroPage />} />
-                          <Route path="/estoque" element={<EstoquePage />} />
-                          {/* Adicione a rota de configurações aqui se necessário */}
-                      </Routes>
-                  </div>
-              </main>
-              <PedidoModal pedido={selectedPedido} onClose={handleCloseModal} onUpdate={handleUpdate} />
-            </div>
-        } />
-      </Routes>
+        <Routes>
+            {/* ========================================================== */}
+            {/* 1. ROTAS PÚBLICAS E DO CLIENTE (as mais específicas) */}
+            {/* ========================================================== */}
+            <Route path="/status/:publicId" element={<StatusPedidoPage />} />
+            <Route path="/cliente/login" element={<ClienteLoginPage />} />
+            <Route path="/ativar-conta/:token" element={<AtivarContaPage />} />
+            
+            <Route 
+                path="/cliente/dashboard" 
+                element={
+                    <ClienteProtectedRoute>
+                        <ClienteDashboardPage />
+                    </ClienteProtectedRoute>
+                } 
+            />
+            <Route 
+                path="/cliente/pedidos/:id" 
+                element={
+                    <ClienteProtectedRoute>
+                        <PedidoDetalheClientePage />
+                    </ClienteProtectedRoute>
+                } 
+            />
+
+            {/* ========================================================== */}
+            {/* 2. A ROTA "APANHA-TUDO" DO PAINEL DE ADMIN (por último) */}
+            {/* ========================================================== */}
+            <Route path="/*" element={
+                <div className="flex h-screen bg-gray-100 font-sans">
+                    <aside className={`bg-white text-gray-800 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <h1 className={`text-xl font-bold text-blue-700 ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1>
+                            <button 
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="p-2 rounded-lg hover:bg-gray-200"
+                            >
+                                {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                            </button>
+                        </div>
+                        <nav className="mt-6 px-4 space-y-2">
+                            <NavLink to="/" label="Dashboard" icon={LayoutDashboard} />
+                            <NavLink to="/pedidos" label="Pedidos" icon={List} />
+                            <NavLink to="/agenda" label="Agenda" icon={Calendar} />
+                            <NavLink to="/financeiro" label="Financeiro" icon={Wallet} />
+                            <NavLink to="/estoque" label="Estoque" icon={Archive} />
+                            <NavLink to="/clientes" label="Clientes" icon={Users} />
+                            <NavLink to="/configuracoes" label="Configurações" icon={Settings} />
+                        </nav>
+                    </aside>
+                    <main className="flex-1 flex flex-col overflow-hidden">
+                        { /* Seu Header aqui, se tiver um */ }
+                        <div className="flex-1 p-6 overflow-y-auto">
+                            <Routes>
+                                <Route path="/" element={<DashboardPage />} />
+                                <Route path="/pedidos" element={<PedidosPage onPedidoClick={handlePedidoClick} />} />
+                                <Route path="/clientes" element={<ClientesPage />} />
+                                <Route path="/agenda" element={<AgendaPage />} />
+                                <Route path="/financeiro" element={<FinanceiroPage />} />
+                                <Route path="/estoque" element={<EstoquePage />} />
+                            </Routes>
+                        </div>
+                    </main>
+                    <PedidoModal pedido={selectedPedido} onClose={handleCloseModal} onUpdate={handleUpdate} />
+                </div>
+            } />
+        </Routes>
     </BrowserRouter>
-);
-}
+ );
+    }
