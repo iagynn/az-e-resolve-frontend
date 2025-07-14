@@ -11,6 +11,8 @@ import { BrowserRouter, Routes, Route, NavLink as RouterNavLink, useParams } fro
 import ClienteLoginPage from './pages/Cliente/ClienteLoginPage';
 import ClienteDashboardPage from './pages/Cliente/ClienteDashboardPage';
 import ClienteProtectedRoute from './components/ClienteProtectedRoute';
+import PedidoDetalheClientePage from './pages/Cliente/PedidoDetalheClientePage';
+import AtivarContaPage from './pages/Public/AtivarContaPage';
 // ===============================================================
 // ÍCONES SVG
 // ===============================================================
@@ -269,12 +271,12 @@ function StatusPedidoPage() {
                             <p className="text-gray-600">{pedido.dataAgendamento}</p>
                         </div>
                     )}
-                     {pedido.valorProposto > 0 && (
-                        <div>
-                            <h2 className="font-semibold text-gray-700">Valor do Orçamento:</h2>
-                            <p className="text-lg font-bold text-green-600">{formatCurrency(pedido.valorProposto)}</p>
-                        </div>
-                    )}
+{pedido.valorProposto > 0 && (
+    <div>
+        <h2 className="font-semibold text-gray-700">Valor do Orçamento:</h2>
+        <p className="text-lg font-bold text-green-600">{formatCurrency(pedido.valorProposto)}</p>
+    </div>
+)}
                 </div>
                  <p className="text-xs text-gray-400 text-center mt-8">Consulta de {new Date().toLocaleDateString('pt-BR')}</p>
             </div>
@@ -298,14 +300,32 @@ const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
 const [produtoSelecionadoId, setProdutoSelecionadoId] = useState('');
 const [quantidadeUsada, setQuantidadeUsada] = useState(1);
 const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+const [anotacoes, setAnotacoes] = useState('');
+const [lembreteNF, setLembreteNF] = useState('');
+const [custoDescricao, setCustoDescricao] = useState('');
+const [custoValor, setCustoValor] = useState('');
     
+ // =================================================================
+    // 1. O useMemo para calcular o lucro fica AQUI, no topo do componente.
+    // =================================================================
+    const lucroDoPedido = useMemo(() => {
+        if (!pedido || !pedido.valorProposto) return 0;
 
+        const totalCustos = pedido.custosMateriais?.reduce(
+            (acc, custo) => acc + parseFloat(custo.valor.toString() || 0),
+            0
+        ) || 0;
+
+        return parseFloat(pedido.valorProposto.toString()) - totalCustos;
+    }, [pedido]);
     useEffect(() => {
         if (pedido) {
             setValorProposto(pedido.valorProposto ? String(pedido.valorProposto) : '');
             setNotas(pedido.notasInternas || '');
             setIsScheduling(false);
             setSaveStatus('idle');
+            setAnotacoes(pedido.anotacoesTecnicas || '');
+            setLembreteNF(pedido.lembreteNotaFiscal || '');
         const fetchProdutos = async () => {
             try {
                 const response = await fetch('http://localhost:3000/api/produtos');
@@ -320,6 +340,8 @@ const [isAddingMaterial, setIsAddingMaterial] = useState(false);
                 console.error("Erro ao buscar produtos para o modal:", error);
             }
         };
+        
+        
         fetchProdutos();
     }
 }, [pedido]);
@@ -478,6 +500,44 @@ const handleAdicionarMaterial = async (e) => {
         setIsAddingMaterial(false);
     }
 };
+   const handleSalvarDetalhesOperacionais = async () => {
+        try {
+            const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/operacional`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    anotacoesTecnicas: anotacoes,
+                    lembreteNotaFiscal: lembreteNF 
+                }),
+            });
+            if (!response.ok) throw new Error('Falha ao salvar detalhes.');
+            alert('Detalhes operacionais salvos!');
+            onUpdate(); // Atualiza a UI
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const handleAdicionarCusto = async (e) => {
+        e.preventDefault();
+        if (!custoDescricao || !custoValor || parseFloat(custoValor) <= 0) {
+            alert('Preencha a descrição e um valor válido para o custo.');
+            return;
+        }
+        try {
+            const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/custos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ descricao: custoDescricao, valor: parseFloat(custoValor) }),
+            });
+            if (!response.ok) throw new Error('Falha ao adicionar custo.');
+            setCustoDescricao('');
+            setCustoValor('');
+            onUpdate(); // Atualiza a UI
+        } catch (err) {
+            alert(err.message);
+        }
+    };
 
     const StatusBanner = () => {
         if (pedido.status === 'Finalizado') return <div className="p-3 mb-6 bg-green-100 text-green-800 rounded-lg text-center">Este pedido foi finalizado.</div>;
@@ -534,6 +594,39 @@ const handleAdicionarMaterial = async (e) => {
         ))}
     </div>
 </div>
+<div className="mt-6 border-t pt-6">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Detalhes Operacionais</h3>
+                            
+                            {/* Anotações Técnicas */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-600 mb-1">Anotações Técnicas (Medidas, etc.)</label>
+                                <textarea 
+                                    value={anotacoes} 
+                                    onChange={(e) => setAnotacoes(e.target.value)}
+                                    className="w-full h-24 p-2 border rounded-lg"
+                                    placeholder="Ex: Parede 3.5m x 2.8m. Usar tinta acrílica."
+                                ></textarea>
+                            </div>
+
+                            {/* Lembrete de Nota Fiscal */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-600 mb-1">Lembrete para Nota Fiscal</label>
+                                <input 
+                                    type="text"
+                                    value={lembreteNF}
+                                    onChange={(e) => setLembreteNF(e.target.value)}
+                                    className="w-full p-2 border rounded-lg"
+                                    placeholder="Ex: Emitir NF-e até dia 25."
+                                />
+                            </div>
+
+                            <button 
+                                onClick={handleSalvarDetalhesOperacionais}
+                                className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+                            >
+                                Salvar Anotações e Lembrete
+                            </button>
+                        </div>
                             <div><h3 className="font-semibold text-gray-700">Data da Solicitação</h3><p>{new Date(pedido.data).toLocaleDateString('pt-BR')}</p></div>
                             {pedido.valorProposto > 0 && <div><h3 className="font-semibold text-gray-700">Valor do Orçamento</h3><p className="text-lg font-bold text-green-600">{formatCurrency(pedido.valorProposto)}</p></div>}
                         </div>
@@ -664,6 +757,44 @@ const handleAdicionarMaterial = async (e) => {
                                 )}
                             </ul>
                         </div>
+                         {/* ======================================================= */}
+                        {/* ==> NOVA SECÇÃO DE CUSTOS ADICIONADA AQUI <== */}
+                        {/* ======================================================= */}
+                        <div className="mt-6 border-t pt-6">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Custos com Materiais</h3>
+                            
+                            {/* Lista de custos já adicionados */}
+                            <ul className="space-y-2 mb-4">
+                                {pedido.custosMateriais && pedido.custosMateriais.map((custo, index) => (
+                                    <li key={index} className="text-sm flex justify-between border-b pb-1">
+                                        <span>{custo.descricao}</span>
+                                        <span className="font-mono text-red-600">{formatCurrency(custo.valor)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* Formulário para adicionar novo custo */}
+                            <form onSubmit={handleAdicionarCusto} className="bg-gray-100 p-3 rounded-lg space-y-2">
+                                <input 
+                                    type="text" 
+                                    value={custoDescricao} 
+                                    onChange={(e) => setCustoDescricao(e.target.value)}
+                                    placeholder="Descrição do material" 
+                                    className="w-full p-2 border rounded-md" 
+                                />
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    value={custoValor} 
+                                    onChange={(e) => setCustoValor(e.target.value)}
+                                    placeholder="Valor (R$)" 
+                                    className="w-full p-2 border rounded-md" 
+                                />
+                                <button type="submit" className="w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600">
+                                    Adicionar Custo
+                                </button>
+                            </form>
+                        </div>
                     </aside>
                 </div>
 
@@ -678,6 +809,7 @@ const handleAdicionarMaterial = async (e) => {
         </div>
     );
 }
+
 function ClientOrdersTable({ pedidos }) {
     if (!pedidos || pedidos.length === 0) return <p className="text-sm text-gray-500 px-6 py-4">Este cliente ainda não tem pedidos.</p>;
     return (
@@ -770,58 +902,66 @@ function PedidosPage({ onPedidoClick }) {
         }
     };
 
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Gestão de Pedidos</h1>
-                <input type="text" placeholder="Buscar por nome ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-1/3 p-2 border rounded-lg" />
-            </div>
-            {isLoading && <p className="text-center text-gray-500">A carregar...</p>}
-            {error && <p className="text-center text-red-500">Erro: {error}</p>}
-            {!isLoading && !error && (
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <div className="flex space-x-4 overflow-x-auto pb-4">
-                        {statusOrdem.map((colunaId) => (
-                            <Droppable key={colunaId} droppableId={colunaId}>
-                                {(provided) => (
-                                    <div ref={provided.innerRef} {...provided.droppableProps} className="bg-gray-100 rounded-lg p-4 w-80 flex-shrink-0">
-                                        <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center">{colunaId}<span className="ml-2 bg-gray-300 text-gray-600 text-sm font-semibold px-2 py-1 rounded-full">{filteredColunas[colunaId]?.length || 0}</span></h2>
-                                        <div className="space-y-4 h-full">
-                                            {(filteredColunas[colunaId] || []).map((pedido, index) => (
-                                                <Draggable key={pedido._id} draggableId={pedido._id} index={index}>
-                                                    {(provided) => (
-                                                        // O card em si. Note a classe `relative`
-                                                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => onPedidoClick(pedido)} className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg relative">
-                                                            
-                                                            {/* === ÍCONE NA POSIÇÃO CORRETA === */}
-                                                            <div className="absolute top-2 right-2" title={`Pagamento: ${pedido.statusPagamento || 'Pendente'}`}>
-                                                                <DollarSign className={`h-4 w-4 ${
-                                                                    pedido.statusPagamento === 'Pago' ? 'text-green-500' :
-                                                                    pedido.statusPagamento === 'Pago Parcial' ? 'text-blue-500' :
-                                                                    'text-yellow-500'
-                                                                }`} />
-                                                            </div>
-
-                                                            <p className="font-bold text-gray-800">Pedido #{pedido.shortId}</p>
-                                                            <p className="text-sm text-gray-600 mt-1">{pedido.cliente?.nome || 'Cliente não identificado'}</p>
-                                                            <p className="text-sm text-gray-500 mt-2 line-clamp-2">{pedido.descricao}</p>
-                                                        </div>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                        </div>
-                                    </div>
-                                )}
-                            </Droppable>
-                        ))}
-                    </div>
-                </DragDropContext>
-            )}
+  return (
+    <div>
+        <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-800">Gestão de Pedidos</h1>
+            <input type="text" placeholder="Buscar por nome ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-1/3 p-2 border rounded-lg" />
         </div>
-    );
+        {isLoading && <p className="text-center text-gray-500">A carregar...</p>}
+        {error && <p className="text-center text-red-500">Erro: {error}</p>}
+        {!isLoading && !error && (
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                    {statusOrdem.map((colunaId) => (
+                        <Droppable key={colunaId} droppableId={colunaId}>
+                            {(provided) => (
+                                <div ref={provided.innerRef} {...provided.droppableProps} className="bg-gray-100 rounded-lg p-4 w-80 flex-shrink-0">
+                                    <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center">{colunaId}<span className="ml-2 bg-gray-300 text-gray-600 text-sm font-semibold px-2 py-1 rounded-full">{filteredColunas[colunaId]?.length || 0}</span></h2>
+                                    <div className="space-y-4 h-full">
+                                        {(filteredColunas[colunaId] || []).map((pedido, index) => (
+                                            <Draggable key={pedido._id} draggableId={pedido._id} index={index}>
+                                                {(provided) => (
+                                                    <div
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        {...provided.dragHandleProps}
+                                                        onClick={() => onPedidoClick(pedido)}
+                                                        className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg relative"
+                                                    >
+                                                        <div className="absolute top-2 right-2" title={`Pagamento: ${pedido.statusPagamento || 'Pendente'}`}>
+                                                            <DollarSign className={`h-4 w-4 ${
+                                                                pedido.statusPagamento === 'Pago' ? 'text-green-500' :
+                                                                pedido.statusPagamento === 'Pago Parcial' ? 'text-blue-500' :
+                                                                'text-yellow-500'
+                                                            }`} />
+                                                        </div>
+                                                        <p className="font-bold text-gray-800">Pedido #{pedido.shortId}</p>
+                                                        <p className="text-sm text-gray-600 mt-1">{pedido.cliente?.nome || 'Cliente não identificado'}</p>
+                                                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">{pedido.descricao}</p>
+                                                        {pedido.valorProposto > 0 && (
+                                                            <div className="mt-3 pt-2 border-t flex justify-end">
+                                                                <span className={`text-sm font-bold ${pedido.lucro >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                                    Lucro: {formatCurrency(pedido.lucro)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </Draggable>
+                                        ))}
+                                        {provided.placeholder}
+                                    </div>
+                                </div>
+                            )}
+                        </Droppable>
+                    ))}
+                </div>
+            </DragDropContext>
+        )}
+    </div>
+);
 }
-
 function ClientesPage() {
     const [clientes, setClientes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -856,16 +996,40 @@ function ClientesPage() {
     const filteredClientes = useMemo(() => {
         if (!searchTerm) return clientes;
         return clientes.filter(c => c.nome.toLowerCase().includes(searchTerm.toLowerCase()) || c.telefone.includes(searchTerm));
-    }, [searchTerm, clientes]);
-    return (
+    }, [searchTerm, clientes]
+);
+ const handleEnviarConvite = async (clienteId) => {
+        // O event.stopPropagation() evita que o clique no botão
+        // também acione o clique na linha da tabela (que abre os detalhes).
+        window.event.stopPropagation(); 
+        
+        if (!window.confirm('Tem a certeza que deseja enviar um convite de acesso ao portal para este cliente?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:3000/api/clientes/${clienteId}/enviar-convite`, {
+                method: 'POST',
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao enviar o convite.');
+            }
+            
+            alert('Convite enviado com sucesso!');
+        } catch (err) {
+            console.error("Erro ao enviar convite:", err);
+            alert(err.message);
+        }
+    };
+   return (
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">Gestão de Clientes</h1>
                 <input type="text" placeholder="Buscar por nome ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-1/3 p-2 border rounded-lg" />
             </div>
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                {isLoading && <p className="p-6 text-center">A carregar clientes...</p>}
-                {error && <p className="p-6 text-center text-red-500">{error}</p>}
                 {!isLoading && !error && (
                     <table className="min-w-full">
                         <thead className="bg-gray-50">
@@ -873,6 +1037,8 @@ function ClientesPage() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefone</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total de Pedidos</th>
+                                {/* ==> 2. ADICIONAMOS A NOVA COLUNA NO CABEÇALHO <== */}
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -882,10 +1048,21 @@ function ClientesPage() {
                                         <td className="px-6 py-4 whitespace-nowrap">{cliente.nome}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">{cliente.telefone}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">{cliente.totalPedidos}</td>
+                                        {/* ==> 3. ADICIONAMOS A CÉLULA COM O BOTÃO <== */}
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <button 
+                                                onClick={(event) => handleEnviarConvite(cliente._id, event)}
+                                                className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                                                title="Enviar convite para o portal"
+                                            >
+                                                Convidar
+                                            </button>
+                                        </td>
                                     </tr>
                                     {expandedClientId === cliente._id && (
                                         <tr>
-                                            <td colSpan="3" className="p-0 bg-gray-50">
+                                            {/* Corrigido o colSpan para 4 para alinhar com a nova coluna */}
+                                            <td colSpan="4" className="p-0 bg-gray-50">
                                                 <ClientOrdersTable pedidos={clientDetails[cliente._id]} />
                                             </td>
                                         </tr>
@@ -1180,98 +1357,7 @@ function FinanceiroPage() {
 }
 // Substitua toda a sua função App por esta versão
 
-// Substitua toda a sua função App por esta:
 
-export default function App() {
-    const [selectedPedido, setSelectedPedido] = useState(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-    const handleUpdate = () => { console.log("Atualização global solicitada."); };
-    const handlePedidoClick = (pedido) => { setSelectedPedido(pedido); };
-    const handleCloseModal = () => { setSelectedPedido(null); };
-    
-    const NavLink = ({ to, label, icon: Icon }) => (
-        <RouterNavLink
-            to={to}
-            className={({ isActive }) =>
-                `w-full flex items-center space-x-3 px-4 py-3 transition-colors duration-200 rounded-lg ${
-                    isActive ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'
-                }`
-            }
-        >
-            <Icon className="h-5 w-5" />
-            <span className={`font-medium ${!isSidebarOpen && 'hidden'}`}>{label}</span>
-        </RouterNavLink>
-    );
-
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* ROTAS PÚBLICAS E DO CLIENTE (sem a sidebar do admin) */}
-        <Route path="/status/:publicId" element={<StatusPedidoPage />} />
-        <Route path="/cliente/login" element={<ClienteLoginPage />} />
-        <Route 
-            path="/cliente/dashboard" 
-            element={
-                <ClienteProtectedRoute>
-                    <ClienteDashboardPage />
-                </ClienteProtectedRoute>
-            } 
-        />
-
-        {/* ROTA "APANHA-TUDO" PARA O PAINEL DE ADMINISTRAÇÃO */}
-        {/* Qualquer URL que não seja as de cima, vai cair aqui */}
-        <Route path="/*" element={
-            // O layout principal do painel vai aqui dentro do "element"
-            <div className="flex h-screen bg-gray-100 font-sans">
-              <aside className={`bg-white text-gray-800 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
-                  {/* ...código da sua sidebar... */}
-                  {/* PROVAVELMENTE O SEU CÓDIGO ATUAL ESTÁ ASSIM: */}
-{/* CÓDIGO CORRIGIDO */}
-<div className="flex items-center justify-between p-4 border-b">
-  <h1 className={`text-xl font-bold text-blue-700 ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1>
-  
-  <button 
-      onClick={() => setIsSidebarOpen(!isSidebarOpen)}  // <-- ADICIONADO
-      className="p-2 rounded-lg hover:bg-gray-200"
-  >
-      {/* LÓGICA DO ÍCONE ADICIONADA */}
-      {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-  </button>
-</div>
-                  <nav className="mt-6 px-4 space-y-2">
-                      <NavLink to="/" label="Dashboard" icon={LayoutDashboard} />
-                      <NavLink to="/pedidos" label="Pedidos" icon={List} />
-                      <NavLink to="/agenda" label="Agenda" icon={Calendar} />
-                      <NavLink to="/financeiro" label="Financeiro" icon={Wallet} />
-                      <NavLink to="/estoque" label="Estoque" icon={Archive} />
-                      <NavLink to="/clientes" label="Clientes" icon={Users} />
-                      <NavLink to="/configuracoes" label="Configurações" icon={Settings} />
-                  </nav>
-              </aside>
-              <main className="flex-1 flex flex-col overflow-hidden">
-                  {/* ...código do seu header... */}
-                  <div className="flex-1 p-6 overflow-y-auto">
-                      {/* ROTAS ANINHADAS - Só para as páginas DENTRO do painel */}
-                      <Routes>
-                          {/* CORRIGIDO: A rota para o Dashboard é path="/" */}
-                          <Route path="/" element={<DashboardPage />} />
-                          <Route path="/pedidos" element={<PedidosPage onPedidoClick={handlePedidoClick} />} />
-                          <Route path="/clientes" element={<ClientesPage />} />
-                          <Route path="/agenda" element={<AgendaPage />} />
-                          <Route path="/financeiro" element={<FinanceiroPage />} />
-                          <Route path="/estoque" element={<EstoquePage />} />
-                          {/* Adicione a rota de configurações aqui se necessário */}
-                      </Routes>
-                  </div>
-              </main>
-              <PedidoModal pedido={selectedPedido} onClose={handleCloseModal} onUpdate={handleUpdate} />
-            </div>
-        } />
-      </Routes>
-    </BrowserRouter>
-);
-}
 // Adicione este novo componente completo ao seu arquivo
 
 function EstoquePage() {
@@ -1522,4 +1608,102 @@ function AjusteEstoqueModal({ produto, onClose, onSuccess }) {
             </div>
         </div>
     );
+}
+// Substitua toda a sua função App por esta:
+export default function App() {
+    const [selectedPedido, setSelectedPedido] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    const handleUpdate = () => { console.log("Atualização global solicitada."); };
+    const handlePedidoClick = (pedido) => { setSelectedPedido(pedido); };
+    const handleCloseModal = () => { setSelectedPedido(null); };
+    
+    const NavLink = ({ to, label, icon: Icon }) => (
+        <RouterNavLink
+            to={to}
+            className={({ isActive }) =>
+                `w-full flex items-center space-x-3 px-4 py-3 transition-colors duration-200 rounded-lg ${
+                    isActive ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                }`
+            }
+        >
+            <Icon className="h-5 w-5" />
+            <span className={`font-medium ${!isSidebarOpen && 'hidden'}`}>{label}</span>
+        </RouterNavLink>
+    );
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* ROTAS PÚBLICAS E DO CLIENTE (sem a sidebar do admin) */}
+        <Route path="/status/:publicId" element={<StatusPedidoPage />} />
+        <Route path="/cliente/login" element={<ClienteLoginPage />} />
+        <Route path="/ativar-conta/:token" element={<AtivarContaPage />} />
+          {/* ROTAS PROTEGIDAS DO CLIENTE */}
+    <Route path="/cliente/dashboard" element={<ClienteProtectedRoute>...</ClienteProtectedRoute>} />
+    <Route path="/cliente/pedidos/:id" element={<ClienteProtectedRoute>...</ClienteProtectedRoute>} />
+        <Route 
+            path="/cliente/dashboard" 
+            element={
+                <ClienteProtectedRoute>
+                    <ClienteDashboardPage />
+                </ClienteProtectedRoute>
+            } 
+        />
+<Route 
+        path="/cliente/pedidos/:id" 
+        element={<ClienteProtectedRoute><PedidoDetalheClientePage /></ClienteProtectedRoute>} 
+    />
+        {/* ROTA "APANHA-TUDO" PARA O PAINEL DE ADMINISTRAÇÃO */}
+        {/* Qualquer URL que não seja as de cima, vai cair aqui */}
+        <Route path="/*" element={
+            // O layout principal do painel vai aqui dentro do "element"
+            <div className="flex h-screen bg-gray-100 font-sans">
+              <aside className={`bg-white text-gray-800 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+                  {/* ...código da sua sidebar... */}
+                  {/* PROVAVELMENTE O SEU CÓDIGO ATUAL ESTÁ ASSIM: */}
+{/* CÓDIGO CORRIGIDO */}
+<div className="flex items-center justify-between p-4 border-b">
+  <h1 className={`text-xl font-bold text-blue-700 ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1>
+  
+  <button 
+      onClick={() => setIsSidebarOpen(!isSidebarOpen)}  // <-- ADICIONADO
+      className="p-2 rounded-lg hover:bg-gray-200"
+  >
+      {/* LÓGICA DO ÍCONE ADICIONADA */}
+      {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+  </button>
+</div>
+                  <nav className="mt-6 px-4 space-y-2">
+                      <NavLink to="/" label="Dashboard" icon={LayoutDashboard} />
+                      <NavLink to="/pedidos" label="Pedidos" icon={List} />
+                      <NavLink to="/agenda" label="Agenda" icon={Calendar} />
+                      <NavLink to="/financeiro" label="Financeiro" icon={Wallet} />
+                      <NavLink to="/estoque" label="Estoque" icon={Archive} />
+                      <NavLink to="/clientes" label="Clientes" icon={Users} />
+                      <NavLink to="/configuracoes" label="Configurações" icon={Settings} />
+                  </nav>
+              </aside>
+              <main className="flex-1 flex flex-col overflow-hidden">
+                  {/* ...código do seu header... */}
+                  <div className="flex-1 p-6 overflow-y-auto">
+                      {/* ROTAS ANINHADAS - Só para as páginas DENTRO do painel */}
+                      <Routes>
+                          {/* CORRIGIDO: A rota para o Dashboard é path="/" */}
+                          <Route path="/" element={<DashboardPage />} />
+                          <Route path="/pedidos" element={<PedidosPage onPedidoClick={handlePedidoClick} />} />
+                          <Route path="/clientes" element={<ClientesPage />} />
+                          <Route path="/agenda" element={<AgendaPage />} />
+                          <Route path="/financeiro" element={<FinanceiroPage />} />
+                          <Route path="/estoque" element={<EstoquePage />} />
+                          {/* Adicione a rota de configurações aqui se necessário */}
+                      </Routes>
+                  </div>
+              </main>
+              <PedidoModal pedido={selectedPedido} onClose={handleCloseModal} onUpdate={handleUpdate} />
+            </div>
+        } />
+      </Routes>
+    </BrowserRouter>
+);
 }
