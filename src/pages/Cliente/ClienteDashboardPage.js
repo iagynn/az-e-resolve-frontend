@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const ClienteDashboardPage = () => {
     const navigate = useNavigate();
@@ -10,10 +10,6 @@ const ClienteDashboardPage = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-           // ==========================================================
-    // ==> ADICIONE APENAS ESTA LINHA DE TESTE <==
-    // ==========================================================
-    alert('SE ESTA MENSAGEM APARECER, O USEEFFECT ESTÁ A FUNCIONAR!');
         // Função para buscar os dados
         const fetchPedidos = async () => {
             // Pega o token do localStorage
@@ -74,13 +70,19 @@ const ClienteDashboardPage = () => {
                 {!isLoading && !error && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {pedidos.length > 0 ? (
-                            pedidos.map(pedido => (
-                                <div key={pedido._id} style={{ padding: '1rem', background: '#f3f4f6', borderRadius: '8px', borderLeft: '5px solid #3b82f6' }}>
-                                    <p style={{ fontWeight: 'bold' }}>Pedido #{pedido.shortId}</p>
-                                    <p>{pedido.descricao}</p>
-                                    <p style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>Status: <span style={{ padding: '0.25rem 0.5rem', background: '#e0e7ff', color: '#3730a3', borderRadius: '99px', fontSize: '0.8rem' }}>{pedido.status}</span></p>
-                                </div>
-                            ))
+                           pedidos.map(pedido => (
+    <Link 
+        key={pedido._id} 
+        to={`/cliente/pedidos/${pedido._id}`}
+        className="block p-4 bg-gray-100 rounded-lg border-l-4 border-blue-500 hover:bg-gray-200 transition-colors no-underline text-black"
+    >
+        <div className="flex justify-between items-center">
+            <p style={{ fontWeight: 'bold' }}>Pedido #{pedido.shortId}</p>
+            <span className="text-sm font-semibold bg-blue-200 text-blue-800 px-3 py-1 rounded-full">{pedido.status}</span>
+        </div>
+        <p className="mt-2 text-gray-600">{pedido.descricao.slice(0, 150)}...</p>
+    </Link>
+))
                         ) : (
                             <p>Você ainda não tem nenhum pedido registado.</p>
                         )}

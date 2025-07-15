@@ -66,6 +66,37 @@ const PedidoDetalheClientePage = () => {
             alert(err.message);
         }
     };
+    const handleSugerirAgendamento = async (e) => {
+    e.preventDefault(); // Impede o recarregamento da página
+    const dataSugerida = e.target.elements.dataSugerida.value;
+
+    if (!dataSugerida) {
+        alert('Por favor, selecione uma data e hora.');
+        return;
+    }
+
+    const token = localStorage.getItem('clienteToken');
+    try {
+        const response = await fetch(`http://localhost:3000/api/portal-cliente/pedidos/${id}/sugerir-agendamento`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ dataSugerida: dataSugerida })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao enviar sugestão.');
+        }
+        
+        alert('Sugestão de agendamento enviada com sucesso!');
+        fetchPedido(); // Recarrega os dados do pedido para mostrar a sugestão na tela
+    } catch (err) {
+        alert(err.message);
+    }
+};
 
     if (loading) {
         return <div className="p-8 text-center">A carregar detalhes...</div>;
@@ -112,7 +143,7 @@ const PedidoDetalheClientePage = () => {
                     )}
                 </div>
                 
-                {pedido.status === 'Pendente' && (
+                {pedido.status === 'Pendente' && pedido.valorProposto > 0 && (
                     <div className="mt-6 pt-6 border-t">
                         <h2 className="text-lg font-semibold text-gray-800 mb-3">Ações do Orçamento</h2>
                         <div className="flex space-x-4">
@@ -129,11 +160,30 @@ const PedidoDetalheClientePage = () => {
                                 Rejeitar Orçamento
                             </button>
                         </div>
+                        {pedido.status === 'Aceito' && (
+    <div className="mt-6 pt-6 border-t">
+        <h2 className="text-lg font-semibold text-gray-800 mb-3">Sugerir Data para o Serviço</h2>
+        
+        {pedido.sugestaoAgendamentoCliente ? (
+            <p className="p-4 bg-green-100 text-green-800 rounded-lg">
+                Sua sugestão de agendamento para **{pedido.sugestaoAgendamentoCliente}** foi enviada. Aguarde a confirmação do prestador.
+            </p>
+        ) : (
+            <form onSubmit={handleSugerirAgendamento} className="flex items-end space-x-2">
+                <input type="datetime-local" required className="flex-1 p-2 border rounded-lg" />
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">
+                    Enviar Sugestão
+                </button>
+            </form>
+        )}
+    </div>
+)}
                     </div>
                 )}
             </div>
         </div>
     );
+    
 };
 
 export default PedidoDetalheClientePage;
