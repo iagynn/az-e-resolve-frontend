@@ -1387,30 +1387,61 @@ function GraficoFaturamento() {
         </div>
     );
 }
-function AgendaPage() {
+function AgendaPage({ onPedidoClick }) {
+    // 1. Estados para guardar os eventos, loading e erros
     const [eventos, setEventos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
+    // 2. Busca os dados da API quando o componente é montado
     useEffect(() => {
         const fetchEventos = async () => {
             try {
                 const response = await fetch('http://localhost:3000/api/orcamentos/agendados');
+                if (!response.ok) {
+                    throw new Error('Não foi possível carregar os agendamentos.');
+                }
                 const data = await response.json();
                 setEventos(data);
-            } catch (error) {
-                console.error("Erro ao buscar eventos do calendário:", error);
-                alert("Não foi possível carregar os agendamentos.");
+            } catch (err) {
+                setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
         fetchEventos();
-    }, []);
+    }, []); // O array vazio [] garante que isso rode apenas uma vez
 
+    // 3. Função para lidar com o clique em um evento do calendário
+    const handleEventClick = async (clickInfo) => {
+        const pedidoId = clickInfo.event.id;
+        console.log(`Evento clicado! ID do Pedido: ${pedidoId}`);
+        try {
+            // O evento do calendário tem dados simplificados, então buscamos o pedido completo
+            const response = await fetch(`http://localhost:3000/api/orcamentos/${pedidoId}`);
+            if(!response.ok) throw new Error('Não foi possível carregar os detalhes do pedido.');
+            const pedidoCompleto = await response.json();
+            
+            // Chama a função do App para abrir o modal com os dados completos
+            onPedidoClick(pedidoCompleto);
+
+        } catch(err) {
+            alert('Erro ao carregar detalhes do pedido.');
+            console.error(err);
+        }
+    };
+
+
+    // 4. Renderização condicional
     if (loading) {
         return <div className="p-6 text-center">A carregar agenda...</div>;
     }
 
+    if (error) {
+        return <div className="p-6 text-center text-red-500">Erro: {error}</div>;
+    }
+
+    // 5. Renderização do calendário com os dados
     return (
         <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Agenda de Serviços</h1>
@@ -1432,6 +1463,10 @@ function AgendaPage() {
                         day: 'Dia'
                     }}
                     height="auto"
+                    eventClick={handleEventClick} // <-- A mágica acontece aqui!
+                    eventColor="#3b82f6" // Cor dos eventos
+                    eventDisplay="block" // Melhora a aparência dos eventos
+                    dayMaxEvents={true} // Evita que o calendário fique muito cheio
                 />
             </div>
         </div>
@@ -1942,7 +1977,7 @@ export default function App() {
                                 <Route path="/" element={<DashboardPage />} />
                                 <Route path="/pedidos" element={<PedidosPage onPedidoClick={handlePedidoClick} />} />
                                 <Route path="/clientes" element={<ClientesPage />} />
-                                <Route path="/agenda" element={<AgendaPage />} />
+                                <Route path="/agenda" element={<AgendaPage onPedidoClick={handlePedidoClick} />} />
                                 <Route path="/financeiro" element={<FinanceiroPage />} />
                                 <Route path="/estoque" element={<EstoquePage />} />
                             </Routes>
