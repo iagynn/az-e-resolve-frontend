@@ -209,6 +209,9 @@ function StatusPedidoPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
      const { publicId } = useParams();
+     const [filtroStatusPagamento, setFiltroStatusPagamento] = useState('todos'); // 'todos', 'pendente', 'parcial', 'pago'
+     const [dataInicio, setDataInicio] = useState(''); // Formato YYYY-MM-DD
+     const [dataFim, setDataFim] = useState('');     // Formato YYYY-MM-DD
 
     useEffect(() => {
         // Pega o ID público da URL do navegador
@@ -285,7 +288,7 @@ function StatusPedidoPage() {
 }
 
 
-function PedidoModal({ pedido, onClose, onUpdate }) {
+function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento, onRemovePagamento }) {
     // =======================================================
     // ESTADOS (TODOS JUNTOS E CORRIGIDOS)
     // =======================================================
@@ -294,7 +297,9 @@ function PedidoModal({ pedido, onClose, onUpdate }) {
     const [valorProposto, setValorProposto] = useState('');
     const [isScheduling, setIsScheduling] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmittingPagamento, setIsSubmittingPagamento] = useState(false);
+    const [novoValor, setNovoValor] = useState('');
+    const [novoMetodo, setNovoMetodo] = useState('Pix');
+    const [novaObservacao, setNovaObservacao] = useState('');
 // Adicione estes novos estados no topo da sua função PedidoModal
 const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
 const [produtoSelecionadoId, setProdutoSelecionadoId] = useState('');
@@ -454,23 +459,6 @@ const [custoValor, setCustoValor] = useState('');
         }
         
     };
-    const handleUpdatePagamento = async (novoStatus) => {
-    if (novoStatus === pedido.statusPagamento) return;
-    setIsSubmittingPagamento(true);
-    try {
-        const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/pagamento`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ statusPagamento: novoStatus }),
-        });
-        if (!response.ok) throw new Error('Falha ao atualizar pagamento.');
-        onUpdate(); // Para atualizar a UI com os novos dados
-    } catch (err) {
-        alert(err.message);
-    } finally {
-        setIsSubmittingPagamento(false);
-    }
-};
 // Adicione esta nova função junto com as outras
 const handleAdicionarMaterial = async (e) => {
     e.preventDefault();
@@ -567,13 +555,26 @@ const handleAdicionarMaterial = async (e) => {
         alert(err.message);
     }
 };
-
+const handleAddPagamentoSubmit = (e) => {
+    e.preventDefault();
+    // Chama a função que veio do componente PAI (App)
+    onAddPagamento({
+      valor: novoValor,
+      metodo: novoMetodo,
+      observacao: novaObservacao
+    });
+    // Limpa os campos do formulário local
+    setNovoValor('');
+    setNovoMetodo('Pix');
+    setNovaObservacao('');
+};
     const StatusBanner = () => {
         if (pedido.status === 'Finalizado') return <div className="p-3 mb-6 bg-green-100 text-green-800 rounded-lg text-center">Este pedido foi finalizado.</div>;
         if (pedido.status === 'Rejeitado') return <div className="p-3 mb-6 bg-red-100 text-red-800 rounded-lg text-center">Este pedido foi rejeitado.</div>;
         return null;
     };
-
+const totalPago = pedido.pagamentos?.reduce((acc, p) => acc + p.valor, 0) || 0;
+const saldoDevedor = (pedido.valorProposto || 0) - totalPago;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -604,24 +605,98 @@ const handleAdicionarMaterial = async (e) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div><h3 className="font-semibold text-gray-700">Cliente</h3><p>{pedido.cliente?.nome || 'N/A'}</p><p className="text-sm text-gray-500">{pedido.cliente?.telefone}</p></div>
                             <div><h3 className="font-semibold text-gray-700">Endereço</h3><p>{pedido.address || 'N/A'}</p></div>
-                            <div className="mt-6 pt-6 border-t">
-    <h3 className="font-semibold text-gray-700 mb-2">Status do Pagamento</h3>
-    <div className="flex space-x-2">
-        {['Pendente', 'Pago Parcial', 'Pago'].map(status => (
-            <button 
-                key={status}
-                onClick={() => handleUpdatePagamento(status)}
-                disabled={isSubmittingPagamento}
-                className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                    (pedido.statusPagamento || 'Pendente') === status
-                    ? 'bg-blue-600 text-white font-semibold'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-            >
-                {status}
-            </button>
-        ))}
+
+<div className="mt-6 pt-6 border-t">
+    <h3 className="text-lg font-semibold text-gray-800 mb-4">Controle Financeiro</h3>
+    
+    {/* Resumo Financeiro */}
+    <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+        <div>
+            <p className="text-sm text-gray-500">Valor Total</p>
+            <p className="text-xl font-bold text-blue-600">{formatCurrency(pedido.valorProposto)}</p>
+        </div>
+        <div>
+            <p className="text-sm text-gray-500">Total Pago</p>
+            <p className="text-xl font-bold text-green-600">{formatCurrency(totalPago)}</p>
+        </div>
+        <div>
+            <p className="text-sm text-gray-500">Saldo Devedor</p>
+            <p className={`text-xl font-bold ${saldoDevedor > 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                {formatCurrency(saldoDevedor)}
+            </p>
+        </div>
     </div>
+
+    {/* Lista de Pagamentos */}
+    <div className="mb-6">
+        <h4 className="font-semibold text-gray-700 mb-2">Histórico de Pagamentos</h4>
+        {pedido.pagamentos && pedido.pagamentos.length > 0 ? (
+            <ul className="space-y-2">
+                {pedido.pagamentos.map(p => (
+                    <li key={p._id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg text-sm">
+                        <div>
+                            <span className="font-semibold">{formatCurrency(p.valor)}</span>
+                            <span className="text-gray-600 mx-2">|</span>
+                            <span>{p.metodo}</span>
+                            <span className="block text-xs text-gray-500 italic">{p.observacao}</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                             <span className="text-xs text-gray-400">{new Date(p.data).toLocaleDateString('pt-BR')}</span>
+                             <button onClick={() => onRemovePagamento(p._id)} className="text-red-500 hover:text-red-700">
+                                 {/* Ícone de Lixeira (opcional, pode usar um X) */}
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                             </button>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        ) : (
+            <p className="text-sm text-gray-500 italic text-center p-4 bg-gray-50 rounded-lg">Nenhum pagamento registrado.</p>
+        )}
+    </div>
+
+    {/* Formulário para Adicionar Pagamento */}
+    {saldoDevedor > 0 && (
+        <form onSubmit={handleAddPagamentoSubmit}className="bg-blue-50 p-4 rounded-lg space-y-3">
+            <h4 className="font-semibold text-gray-700">Adicionar Novo Pagamento</h4>
+            <div className="flex flex-col md:flex-row gap-3">
+                <input 
+                    type="number"
+                    placeholder="Valor"
+                    value={novoValor}
+                    onChange={(e) => setNovoValor(e.target.value)}
+                    className="flex-grow p-2 border rounded-lg"
+                    step="0.01"
+                    required
+                />
+                <select 
+                    value={novoMetodo}
+                    onChange={(e) => setNovoMetodo(e.target.value)}
+                    className="p-2 border rounded-lg bg-white"
+                >
+                    <option>Pix</option>
+                    <option>Dinheiro</option>
+                    <option>Cartão de Crédito</option>
+                    <option>Cartão de Débito</option>
+                    <option>Transferência</option>
+                </select>
+            </div>
+            <input 
+                type="text"
+                placeholder="Observação (opcional)"
+                value={novaObservacao}
+                onChange={(e) => setNovaObservacao(e.target.value)}
+                className="w-full p-2 border rounded-lg"
+            />
+            <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-blue-300"
+            >
+                {isSubmitting ? 'Adicionando...' : 'Adicionar Pagamento'}
+            </button>
+        </form>
+    )}
 </div>
 <div className="mt-6 border-t pt-6">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Detalhes Operacionais</h3>
@@ -939,23 +1014,59 @@ function PedidosPage({ onPedidoClick }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    
-    const fetchAllPedidos = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch('http://localhost:3000/api/orcamentos');
-            if (!response.ok) throw new Error('A resposta da rede não foi ok');
-            const data = await response.json();
-            const pedidosPorStatus = statusOrdem.reduce((acc, status) => {
-                acc[status] = data.filter(p => p.status === status);
-                return acc;
-            }, {});
-            setColunas(pedidosPorStatus);
-        } catch (err) { setError(err.message); } 
-        finally { setIsLoading(false); }
-    }, []);
+    const [filtroStatusPagamento, setFiltroStatusPagamento] = useState('todos');
+    const [dataInicio, setDataInicio] = useState('');
+    const [dataFim, setDataFim] = useState('');
 
-    useEffect(() => { fetchAllPedidos(); }, [fetchAllPedidos]);
+   const fetchAllPedidos = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    // 1. Constrói a query string dinamicamente
+    const params = new URLSearchParams();
+    if (searchTerm) {
+        params.append('search', searchTerm);
+    }
+    if (filtroStatusPagamento && filtroStatusPagamento !== 'todos') {
+        params.append('statusPagamento', filtroStatusPagamento);
+    }
+    if (dataInicio) {
+        params.append('dataInicio', dataInicio);
+    }
+    if (dataFim) {
+        params.append('dataFim', dataFim);
+    }
+    
+    const queryString = params.toString();
+    const apiUrl = `http://localhost:3000/api/orcamentos?${queryString}`;
+
+    console.log("Buscando dados da API:", apiUrl); // Ótimo para debugging
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('A resposta da rede não foi ok');
+        
+        const data = await response.json();
+        
+        // Organiza os pedidos por status para o Kanban
+        const statusOrdem = ['Pendente', 'Aceito', 'Agendado', 'Finalizado', 'Rejeitado'];
+        const pedidosPorStatus = statusOrdem.reduce((acc, status) => {
+            acc[status] = data.filter(p => p.status === status);
+            return acc;
+        }, {});
+
+        setColunas(pedidosPorStatus);
+    } catch (err) { 
+        setError(err.message); 
+    } finally { 
+        setIsLoading(false); 
+    }
+// 2. ATUALIZA O ARRAY DE DEPENDÊNCIAS do useCallback
+}, [searchTerm, filtroStatusPagamento, dataInicio, dataFim]);
+ useEffect(() => {
+        console.log("useEffect foi disparado. Chamando a busca na API...");
+        fetchAllPedidos();
+    }, [fetchAllPedidos]); // A dependência é a própria função fetchAllPedidos
 
     const filteredColunas = useMemo(() => {
         if (!searchTerm) return colunas;
@@ -997,10 +1108,57 @@ function PedidosPage({ onPedidoClick }) {
 
   return (
     <div>
-        <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Gestão de Pedidos</h1>
-            <input type="text" placeholder="Buscar por nome ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-1/3 p-2 border rounded-lg" />
+       {/* ✅ NOVO CABEÇALHO COM O PAINEL DE FILTROS INTEGRADO */}
+<div className="mb-6">
+    <div className="flex justify-between items-center mb-4">
+        <h1 className="text-3xl font-bold text-gray-800">Gestão de Pedidos</h1>
+        <input 
+            type="text" 
+            placeholder="Buscar por cliente, telefone ou descrição..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            className="w-1/3 p-2 border rounded-lg" 
+        />
+    </div>
+
+    {/* --- Painel de Filtros --- */}
+    <div className="bg-white p-4 rounded-lg shadow-sm flex flex-wrap items-end gap-6">
+        {/* Filtro por Status de Pagamento */}
+        <div>
+            <label className="text-sm font-medium text-gray-600 mb-1 block">Status do Pagamento</label>
+            <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+                {['todos', 'pendente', 'parcial', 'pago'].map(status => (
+                    <button 
+                        key={status}
+                        onClick={() => setFiltroStatusPagamento(status)}
+                        className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${
+                            filtroStatusPagamento === status 
+                            ? 'bg-blue-600 text-white shadow' 
+                            : 'text-gray-600 hover:bg-gray-300'
+                        }`}
+                    >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                ))}
+            </div>
         </div>
+
+        {/* Filtro por Data */}
+        <div className="flex items-end gap-2">
+            <div>
+                <label htmlFor="dataInicio" className="text-sm font-medium text-gray-600 mb-1 block">De</label>
+                <input id="dataInicio" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="p-2 border rounded-lg bg-white h-[42px]" />
+            </div>
+            <div>
+                <label htmlFor="dataFim" className="text-sm font-medium text-gray-600 mb-1 block">Até</label>
+                <input id="dataFim" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="p-2 border rounded-lg bg-white h-[42px]" />
+            </div>
+            <button onClick={() => { setDataInicio(''); setDataFim(''); }} className="px-3 py-2 text-sm bg-gray-500 text-white rounded-lg h-[42px] hover:bg-gray-600" title="Limpar datas">
+                Limpar
+            </button>
+        </div>
+    </div>
+</div>
         {isLoading && <p className="text-center text-gray-500">A carregar...</p>}
         {error && <p className="text-center text-red-500">Erro: {error}</p>}
         {!isLoading && !error && (
