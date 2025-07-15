@@ -345,7 +345,6 @@ const [custoValor, setCustoValor] = useState('');
         fetchProdutos();
     }
 }, [pedido]);
-
     if (!pedido) return null;
 
     const podeExecutarAcoes = !['Finalizado', 'Rejeitado'].includes(pedido.status);
@@ -400,7 +399,7 @@ const [custoValor, setCustoValor] = useState('');
 
     };
 
-    const handleUpdateStatus = async (newStatus) => {
+ const handleUpdateStatus = async (newStatus) => {
         setIsSubmitting(true);
         try {
             await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/status`, {
@@ -416,7 +415,6 @@ const [custoValor, setCustoValor] = useState('');
             setIsSubmitting(false);
         }
     };
-
     const handleSubmitOrcamento = async (e) => {
         e.preventDefault();
         if (!valorProposto || parseFloat(valorProposto) <= 0) {
@@ -538,6 +536,37 @@ const handleAdicionarMaterial = async (e) => {
             alert(err.message);
         }
     };
+    const handleFotoSubmit = async (e) => {
+    e.preventDefault();
+    const file = e.target.foto.files[0];
+    const descricao = e.target.descricao.value;
+
+    if (!file) {
+        alert('Por favor, selecione um ficheiro.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('foto', file);
+    formData.append('descricao', descricao);
+
+    try {
+        const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/upload-foto`, {
+            method: 'POST',
+            body: formData,
+            // NÃO defina o 'Content-Type'. O navegador faz isso automaticamente para o FormData.
+        });
+
+        if (!response.ok) {
+            throw new Error('Falha no upload da foto.');
+        }
+
+        alert('Foto enviada com sucesso!');
+        onUpdate(); // Para recarregar os dados do pedido e mostrar a nova foto
+    } catch (err) {
+        alert(err.message);
+    }
+};
 
     const StatusBanner = () => {
         if (pedido.status === 'Finalizado') return <div className="p-3 mb-6 bg-green-100 text-green-800 rounded-lg text-center">Este pedido foi finalizado.</div>;
@@ -772,6 +801,29 @@ const handleAdicionarMaterial = async (e) => {
                                 )}
                             </ul>
                         </div>
+                         {pedido.status === 'Finalizado' && (
+        <div className="mt-6 border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Documentos</h3>
+            <a
+                href={`http://localhost:3000/api/orcamentos/${pedido._id}/fatura-pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full px-4 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors no-underline"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Gerar Fatura (PDF)
+            </a>
+
+            {/* Opcional: Adicionar um aviso se o pagamento não foi efetuado */}
+            {pedido.statusPagamento !== 'Pago' && (
+                <p className="text-xs text-center text-yellow-700 mt-2 bg-yellow-100 p-2 rounded-md">
+                    Atenção: O pagamento ainda está como '{pedido.statusPagamento}'.
+                </p>
+            )}
+        </div>
+    )}
                          {/* ======================================================= */}
                         {/* ==> NOVA SECÇÃO DE CUSTOS ADICIONADA AQUI <== */}
                         {/* ======================================================= */}
@@ -810,20 +862,46 @@ const handleAdicionarMaterial = async (e) => {
                                 </button>
                             </form>
                         </div>
+                                              {/* Secção de Upload de Fotos */}
+<div className="mt-6 border-t pt-6">
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">Adicionar Foto do Serviço</h3>
+    <form onSubmit={handleFotoSubmit}>
+        <div className="space-y-2">
+            <input type="file" name="foto" required className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+            <input type="text" name="descricao" placeholder="Descrição da foto (opcional)" className="w-full p-2 border rounded-md" />
+        </div>
+        <button type="submit" className="mt-2 w-full px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700">
+            Enviar Foto
+        </button>
+    </form>
+    
+    {/* Galeria de Fotos já enviadas */}
+    <div className="mt-4 grid grid-cols-3 gap-4">
+        {pedido.fotosServico && pedido.fotosServico.map((foto, index) => (
+            <div key={index}>
+                <img src={foto.url} alt={foto.descricao} className="rounded-lg object-cover h-24 w-full" />
+                <p className="text-xs text-center text-gray-500 mt-1">{foto.descricao}</p>
+            </div>
+        ))}
+    </div>
+</div>
                     </aside>
                 </div>
 
                 {podeExecutarAcoes && (
                     <footer className="p-4 bg-gray-100 border-t flex justify-end space-x-3">
+                         {/* Botão de gerar fatura à esquerda */}
+    
                         <button onClick={() => handleUpdateStatus('Rejeitado')} disabled={isSubmitting} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Rejeitar Pedido</button>
                         <button onClick={() => handleUpdateStatus('Finalizado')} disabled={isSubmitting || !podeAgendar} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-green-300">Marcar como Finalizado</button>
-                        
+        
                     </footer>
                 )}
             </div>
         </div>
     );
 }
+
 
 function ClientOrdersTable({ pedidos }) {
     if (!pedidos || pedidos.length === 0) return <p className="text-sm text-gray-500 px-6 py-4">Este cliente ainda não tem pedidos.</p>;
