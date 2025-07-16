@@ -153,42 +153,68 @@ function GraficoTopServicosApex() {
         </Card>
     );
 }
+function RankingTopClientes() {
+    const [clientes, setClientes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-function RecentClientsCard({ clients, isLoading }) {
-  if (isLoading) return <Card className="animate-pulse h-48"></Card>;
-  
-  return (
-    <Card>
-        <CardHeader>
-            <CardTitle>Clientes Recentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-             <div className="space-y-4">
-                {clients && clients.length > 0 ? (
-                    clients.map(client => (
-                        <div key={client._id} className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                                    {client.nome.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="ml-4">
-                                    <p className="font-semibold text-gray-700">{client.nome}</p>
-                                    <p className="text-sm text-gray-500">{client.telefone}</p>
-                                </div>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                                Último Pedido: {new Date(client.ultimoPedido).toLocaleDateString('pt-BR')}
-                            </p>
+    useEffect(() => {
+        const fetchTopClientes = async () => {
+            try {
+                const response = await fetch('http://localhost:3000/api/stats/top-clientes');
+                if (!response.ok) {
+                    throw new Error('Não foi possível carregar o ranking de clientes.');
+                }
+                const data = await response.json();
+                setClientes(data);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTopClientes();
+    }, []);
+
+    const renderContent = () => {
+        if (loading) {
+            return <div className="text-center text-gray-500">A carregar...</div>;
+        }
+        if (error) {
+            return <div className="text-center text-red-500">{error}</div>;
+        }
+        if (clientes.length === 0) {
+            return <div className="text-center text-gray-500">Nenhum dado de faturamento de clientes encontrado.</div>;
+        }
+        return (
+            <ul className="space-y-4">
+                {clientes.map((cliente, index) => (
+                    <li key={cliente.clienteId} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center">
+                            <span className="font-bold text-gray-500 w-6">{index + 1}.</span>
+                            <span className="font-medium text-gray-800">{cliente.nome}</span>
                         </div>
-                    ))
-                ) : (
-                    <p className="text-gray-500">Nenhum cliente recente encontrado.</p>
-                )}
-            </div>
-        </CardContent>
-    </Card>
-  );
+                        <span className="font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-md">
+                            {formatCurrency(cliente.valor)}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        );
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Top 5 Clientes (por Faturamento)</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {renderContent()}
+            </CardContent>
+        </Card>
+    );
 }
+
 function DashboardPage() {
     const [dashboardData, setDashboardData] = useState({ stats: {}, recentesClientes: [] });
     const [isLoading, setIsLoading] = useState(true);
@@ -245,8 +271,8 @@ function DashboardPage() {
 
             {/* Linha dos Clientes Recentes */}
             <div className="grid gap-6">
-                <RecentClientsCard clients={dashboardData.recentesClientes} isLoading={isLoading} />
-            </div>
+    <RankingTopClientes />
+</div>
         </div>
     );
 };
