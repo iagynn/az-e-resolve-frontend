@@ -214,7 +214,6 @@ function RankingTopClientes() {
         </Card>
     );
 }
-
 function DashboardPage() {
     const [dashboardData, setDashboardData] = useState({ stats: {}, recentesClientes: [] });
     const [isLoading, setIsLoading] = useState(true);
@@ -281,14 +280,27 @@ function DashboardPage() {
 function ScheduleForm({ onSchedule, onCancel, isSubmitting }) {
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
+    
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!date || !time) { alert("Por favor, preencha a data e a hora."); return; }
-        onSchedule(`${date} às ${time}`);
+        if (!date || !time) { 
+            alert("Por favor, preencha a data e a hora."); 
+            return; 
+        }
+        
+        // ✅ A CORREÇÃO ESTÁ AQUI:
+        // Nós combinamos a data e a hora num formato padrão (ISO 8601)
+        // e criamos um objeto de Data real a partir dele.
+        const dataISO = `${date}T${time}:00`;
+        const dataObjeto = new Date(dataISO);
+
+        // Enviamos o objeto de Data, não mais um texto.
+        onSchedule(dataObjeto);
     };
+
     return (
         <form onSubmit={handleSubmit} className="mt-4 p-4 bg-gray-100 rounded-lg">
-            <h4 className="font-semibold text-gray-700">Sugerir Nova Data</h4>
+            <h4 className="font-semibold text-gray-700">Agendar Data e Hora</h4>
             <div className="flex items-center space-x-2 mt-2">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="p-2 border rounded-lg w-full" disabled={isSubmitting} />
                 <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="p-2 border rounded-lg w-full" disabled={isSubmitting} />
@@ -296,7 +308,7 @@ function ScheduleForm({ onSchedule, onCancel, isSubmitting }) {
             <div className="flex justify-end space-x-2 mt-4">
                 <button type="button" onClick={onCancel} className="px-4 py-2 text-sm bg-gray-200 rounded-lg hover:bg-gray-300" disabled={isSubmitting}>Cancelar</button>
                 <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700" disabled={isSubmitting}>
-                     {isSubmitting ? "A enviar..." : "Propor Orçamento ao Cliente"}
+                    {isSubmitting ? "A agendar..." : "Salvar Agendamento"}
                 </button>
             </div>
         </form>
@@ -385,12 +397,49 @@ function StatusPedidoPage() {
         </div>
     );
 }
+function Tabs({ children }) {
+    const [activeTab, setActiveTab] = useState(children[0].props.label);
+
+    return (
+        <div>
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                    {children.map((child) => (
+                        <button
+                            key={child.props.label}
+                            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                                ${activeTab === child.props.label
+                                    ? 'border-blue-500 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`
+                            }
+                            onClick={() => setActiveTab(child.props.label)}
+                        >
+                            {child.props.label}
+                        </button>
+                    ))}
+                </nav>
+            </div>
+            <div className="pt-6">
+                {children.map((child) => {
+                    if (child.props.label === activeTab) {
+                        return <div key={child.props.label}>{child.props.children}</div>;
+                    }
+                    return null;
+                })}
+            </div>
+        </div>
+    );
+}
+
+// O componente TabPane é apenas um "contentor" para cada aba.
+function TabPane({ label, children }) {
+    return <div>{children}</div>;
+}
 
 
 function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento, onRemovePagamento }) {
-    // =======================================================
-    // ESTADOS (TODOS JUNTOS E CORRIGIDOS)
-    // =======================================================
+    // 1. TODA A SUA LÓGICA (ESTADOS E FUNÇÕES) É MANTIDA AQUI NO TOPO
     const [notas, setNotas] = useState('');
     const [saveStatus, setSaveStatus] = useState('idle');
     const [valorProposto, setValorProposto] = useState('');
@@ -399,29 +448,21 @@ function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento, onRemovePagame
     const [novoValor, setNovoValor] = useState('');
     const [novoMetodo, setNovoMetodo] = useState('Pix');
     const [novaObservacao, setNovaObservacao] = useState('');
-// Adicione estes novos estados no topo da sua função PedidoModal
-const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
-const [produtoSelecionadoId, setProdutoSelecionadoId] = useState('');
-const [quantidadeUsada, setQuantidadeUsada] = useState(1);
-const [isAddingMaterial, setIsAddingMaterial] = useState(false);
-const [anotacoes, setAnotacoes] = useState('');
-const [lembreteNF, setLembreteNF] = useState('');
-const [custoDescricao, setCustoDescricao] = useState('');
-const [custoValor, setCustoValor] = useState('');
-    
- // =================================================================
-    // 1. O useMemo para calcular o lucro fica AQUI, no topo do componente.
-    // =================================================================
+    const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
+    const [produtoSelecionadoId, setProdutoSelecionadoId] = useState('');
+    const [quantidadeUsada, setQuantidadeUsada] = useState(1);
+    const [isAddingMaterial, setIsAddingMaterial] = useState(false);
+    const [anotacoes, setAnotacoes] = useState('');
+    const [lembreteNF, setLembreteNF] = useState('');
+    const [custoDescricao, setCustoDescricao] = useState('');
+    const [custoValor, setCustoValor] = useState('');
+
     const lucroDoPedido = useMemo(() => {
         if (!pedido || !pedido.valorProposto) return 0;
-
-        const totalCustos = pedido.custosMateriais?.reduce(
-            (acc, custo) => acc + parseFloat(custo.valor.toString() || 0),
-            0
-        ) || 0;
-
+        const totalCustos = pedido.custosMateriais?.reduce((acc, custo) => acc + parseFloat(custo.valor.toString() || 0), 0) || 0;
         return parseFloat(pedido.valorProposto.toString()) - totalCustos;
     }, [pedido]);
+
     useEffect(() => {
         if (pedido) {
             setValorProposto(pedido.valorProposto ? String(pedido.valorProposto) : '');
@@ -430,30 +471,22 @@ const [custoValor, setCustoValor] = useState('');
             setSaveStatus('idle');
             setAnotacoes(pedido.anotacoesTecnicas || '');
             setLembreteNF(pedido.lembreteNotaFiscal || '');
-        const fetchProdutos = async () => {
-            try {
-                const response = await fetch('http://localhost:3000/api/produtos');
-                if (!response.ok) return; // Se falhar, não faz nada
-                const data = await response.json();
-                setProdutosDisponiveis(data);
-                // Pré-seleciona o primeiro produto da lista, se houver
-                if (data.length > 0) {
-                    setProdutoSelecionadoId(data[0]._id);
+            const fetchProdutos = async () => {
+                try {
+                    const response = await fetch('http://localhost:3000/api/produtos');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    setProdutosDisponiveis(data);
+                    if (data.length > 0) {
+                        setProdutoSelecionadoId(data[0]._id);
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar produtos para o modal:", error);
                 }
-            } catch (error) {
-                console.error("Erro ao buscar produtos para o modal:", error);
-            }
-        };
-        
-        
-        fetchProdutos();
-    }
-}, [pedido]);
-    if (!pedido) return null;
-
-    const podeExecutarAcoes = !['Finalizado', 'Rejeitado'].includes(pedido.status);
-    const podeEnviarOrcamento = pedido.status === 'Pendente';
-    const podeAgendar = ['Aceito', 'Agendado'].includes(pedido.status);
+            };
+            fetchProdutos();
+        }
+    }, [pedido]);
 
     // =======================================================
     // FUNÇÕES DE LÓGICA (HANDLERS) - TODAS DEFINIDAS
@@ -542,22 +575,25 @@ const [custoValor, setCustoValor] = useState('');
     };
 
     const handleSchedule = async (newDate) => {
-        setIsSubmitting(true);
-        try {
-            await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/schedule`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dataAgendamento: newDate }),
-            });
-            onUpdate();
-            onClose();
-        } catch (err) {
-            alert("Falha ao agendar o pedido.");
-        } finally {
-            setIsSubmitting(false);
-        }
-        
-    };
+    setIsSubmitting(true);
+    try {
+        // ✅ GARANTIMOS QUE ESTAMOS A ENVIAR A DATA NO FORMATO ISO (UTC)
+        // Isso remove qualquer ambiguidade de fuso horário na comunicação com o backend
+        const dataParaEnviar = newDate instanceof Date ? newDate.toISOString() : newDate;
+
+        await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/schedule`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dataAgendamento: dataParaEnviar }),
+        });
+        onUpdate();
+        onClose();
+    } catch (err) {
+        alert("Falha ao agendar o pedido.");
+    } finally {
+        setIsSubmitting(false);
+    }
+};
 // Adicione esta nova função junto com as outras
 const handleAdicionarMaterial = async (e) => {
     e.preventDefault();
@@ -667,14 +703,21 @@ const handleAddPagamentoSubmit = (e) => {
     setNovoMetodo('Pix');
     setNovaObservacao('');
 };
+    if (!pedido) return null;
+
+    const podeExecutarAcoes = !['Finalizado', 'Rejeitado'].includes(pedido.status);
+    const podeEnviarOrcamento = pedido.status === 'Pendente';
+    const podeAgendar = ['Aceito', 'Agendado'].includes(pedido.status);
+    const totalPago = pedido.pagamentos?.reduce((acc, p) => acc + p.valor, 0) || 0;
+    const saldoDevedor = (pedido.valorProposto || 0) - totalPago;
+    
+    
+    
     const StatusBanner = () => {
         if (pedido.status === 'Finalizado') return <div className="p-3 mb-6 bg-green-100 text-green-800 rounded-lg text-center">Este pedido foi finalizado.</div>;
         if (pedido.status === 'Rejeitado') return <div className="p-3 mb-6 bg-red-100 text-red-800 rounded-lg text-center">Este pedido foi rejeitado.</div>;
         return null;
     };
-const totalPago = pedido.pagamentos?.reduce((acc, p) => acc + p.valor, 0) || 0;
-const saldoDevedor = (pedido.valorProposto || 0) - totalPago;
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -910,7 +953,11 @@ const saldoDevedor = (pedido.valorProposto || 0) - totalPago;
         /* CENÁRIO 2: JÁ EXISTE UMA DATA CONFIRMADA */
         ) : pedido.dataAgendamento && !isScheduling ? (
             <div>
-                <p>Serviço agendado para: <span className="font-medium">{pedido.dataAgendamento}</span></p>
+                <p>Serviço agendado para: 
+    <span className="font-medium">
+        {new Date(pedido.dataAgendamento).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+    </span>
+</p>
                 <button 
                     onClick={() => setIsScheduling(true)} 
                     className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"

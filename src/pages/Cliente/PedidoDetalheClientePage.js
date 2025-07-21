@@ -13,9 +13,10 @@ const PedidoDetalheClientePage = () => {
     const [error, setError] = useState('');
     const { id } = useParams();
     const navigate = useNavigate(); // Hook para navegação
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
 
     const fetchPedido = useCallback(async () => {
-        setLoading(true);
         const token = localStorage.getItem('clienteToken');
         if (!token) {
             setError("Sessão inválida.");
@@ -43,11 +44,10 @@ const PedidoDetalheClientePage = () => {
         fetchPedido();
     }, [fetchPedido]);
 
-    const handleDecision = async (action) => {
-        if (!window.confirm(`Você tem certeza que deseja ${action} este orçamento?`)) {
-            return;
-        }
-
+      const handleDecision = async (action) => {
+        if (!window.confirm(`Você tem certeza que deseja ${action} este orçamento?`)) return;
+        
+        setIsSubmitting(true);
         const token = localStorage.getItem('clienteToken');
         try {
             const response = await fetch(`http://localhost:3000/api/portal-cliente/pedidos/${id}/${action}`, {
@@ -60,52 +60,60 @@ const PedidoDetalheClientePage = () => {
                 throw new Error(errorData.message || `Falha ao ${action} o pedido.`);
             }
             
-            alert(`Orçamento foi ${action} com sucesso!`);
-            fetchPedido(); // Recarrega os dados do pedido para mostrar o novo status
+            alert(`Orçamento ${action === 'aprovar' ? 'aprovado' : 'rejeitado'} com sucesso!`);
+            
+            if (action === 'aprovar') {
+                navigate('/cliente/dashboard');
+            } else {
+                fetchPedido(); 
+            }
         } catch (err) {
             alert(err.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
+
     const handleSugerirAgendamento = async (e) => {
-    e.preventDefault(); // Impede o recarregamento da página
-    const dataSugerida = e.target.elements.dataSugerida.value;
+        e.preventDefault();
+        const dataSugerida = e.target.elements.dataSugerida.value;
 
-    if (!dataSugerida) {
-        alert('Por favor, selecione uma data e hora.');
-        return;
-    }
-
-    const token = localStorage.getItem('clienteToken');
-    try {
-        const response = await fetch(`http://localhost:3000/api/portal-cliente/pedidos/${id}/sugerir-agendamento`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ dataSugerida: dataSugerida })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Falha ao enviar sugestão.');
+        if (!dataSugerida) {
+            alert('Por favor, selecione uma data e hora.');
+            return;
         }
-        
-        alert('Sugestão de agendamento enviada com sucesso!');
-        fetchPedido(); // Recarrega os dados do pedido para mostrar a sugestão na tela
-    } catch (err) {
-        alert(err.message);
-    }
-};
 
-    if (loading) {
-        return <div className="p-8 text-center">A carregar detalhes...</div>;
-    }
+        setIsSubmitting(true);
+        const token = localStorage.getItem('clienteToken');
+        try {
+            const response = await fetch(`http://localhost:3000/api/portal-cliente/pedidos/${id}/sugerir-agendamento`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ dataSugerida: dataSugerida })
+            });
 
-    if (error || !pedido) {
-        return <div className="p-8 text-center text-red-500">Erro: {error || "Pedido não encontrado."}</div>;
-    }
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao enviar sugestão.');
+            }
+            
+            alert('Sugestão de agendamento enviada com sucesso!');
+            fetchPedido();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
+    if (loading) return <div className="p-8 text-center">A carregar detalhes...</div>;
+    if (error || !pedido) return <div className="p-8 text-center text-red-500">Erro: {error || "Pedido não encontrado."}</div>;
+
+    const podeAprovar = pedido.status === 'Pendente' && pedido.valorProposto > 0;
+    
     return (
         <div style={{ padding: '2rem', maxWidth: '800px', margin: 'auto' }}>
             <div className='flex justify-between items-center'>
@@ -123,67 +131,64 @@ const PedidoDetalheClientePage = () => {
                 </div>
 
                 <div className="space-y-4">
-                    <div>
-                        <h2 className="font-semibold text-gray-700">Descrição do Serviço:</h2>
-                        <p className="text-gray-600 whitespace-pre-wrap">{pedido.descricao}</p>
-                    </div>
-
-                    {pedido.valorProposto > 0 && (
-                         <div>
-                            <h2 className="font-semibold text-gray-700">Valor do Orçamento:</h2>
-                            <p className="text-xl font-bold text-green-700">{formatCurrency(pedido.valorProposto)}</p>
-                        </div>
-                    )}
-
-                    {pedido.dataAgendamento && (
-                        <div>
-                            <h2 className="font-semibold text-gray-700">Data Agendada:</h2>
-                            <p className="text-gray-600">{pedido.dataAgendamento}</p>
-                        </div>
-                    )}
+                  <h2 className="font-semibold text-gray-700">Descrição do Serviço:</h2>
+                  <p className="text-gray-600 whitespace-pre-wrap">{pedido.descricao}</p>
                 </div>
+                 {pedido.valorProposto > 0 && (
+                <div>
+                    <h2 className="font-semibold text-gray-700">Valor do Orçamento:</h2>
+                    <p className="text-xl font-bold text-green-700">
+                        {formatCurrency(pedido.valorProposto)}
+                    </p>
+                </div>
+            )}
                 
-                {pedido.status === 'Pendente' && pedido.valorProposto > 0 && (
+                {podeAprovar && (
                     <div className="mt-6 pt-6 border-t">
                         <h2 className="text-lg font-semibold text-gray-800 mb-3">Ações do Orçamento</h2>
                         <div className="flex space-x-4">
                             <button 
                                 onClick={() => handleDecision('aprovar')}
-                                className="flex-1 px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600"
+                                disabled={isSubmitting}
+                                className="flex-1 px-4 py-2 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 disabled:bg-gray-400"
                             >
-                                Aprovar Orçamento
+                                {isSubmitting ? 'A processar...' : 'Aprovar Orçamento'}
                             </button>
                             <button 
                                 onClick={() => handleDecision('rejeitar')}
-                                className="flex-1 px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600"
+                                disabled={isSubmitting}
+                                className="flex-1 px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 disabled:bg-gray-400"
                             >
-                                Rejeitar Orçamento
+                                {isSubmitting ? 'A processar...' : 'Rejeitar Orçamento'}
                             </button>
                         </div>
-                        {pedido.status === 'Aceito' && (
-    <div className="mt-6 pt-6 border-t">
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Sugerir Data para o Serviço</h2>
-        
-        {pedido.sugestaoAgendamentoCliente ? (
-            <p className="p-4 bg-green-100 text-green-800 rounded-lg">
-                Sua sugestão de agendamento para **{pedido.sugestaoAgendamentoCliente}** foi enviada. Aguarde a confirmação do prestador.
-            </p>
-        ) : (
-            <form onSubmit={handleSugerirAgendamento} className="flex items-end space-x-2">
-                <input type="datetime-local" required className="flex-1 p-2 border rounded-lg" />
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">
-                    Enviar Sugestão
-                </button>
-            </form>
-        )}
-    </div>
-)}
+                    </div>
+                )}
+                
+                {/* ✅ CORREÇÃO DE LÓGICA: Esta secção foi movida para fora da anterior */}
+                {pedido.status === 'Aceito' && (
+                    <div className="mt-6 pt-6 border-t">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-3">Sugerir Data para o Serviço</h2>
+                        
+                        {pedido.sugestaoAgendamentoCliente ? (
+                            <p className="p-4 bg-green-100 text-green-800 rounded-lg">
+                                Sua sugestão de agendamento para <strong>{new Date(pedido.sugestaoAgendamentoCliente).toLocaleString('pt-BR')}</strong> foi enviada. Aguarde a confirmação do prestador.
+                            </p>
+                        ) : (
+                            <form onSubmit={handleSugerirAgendamento} className="flex items-end space-x-2">
+                                {/* ✅ CORREÇÃO: Adicionado o atributo 'name' */}
+                                <input type="datetime-local" name="dataSugerida" required className="flex-1 p-2 border rounded-lg" disabled={isSubmitting} />
+                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-400" disabled={isSubmitting}>
+                                    {isSubmitting ? 'A enviar...' : 'Enviar Sugestão'}
+                                </button>
+                            </form>
+                        )}
                     </div>
                 )}
             </div>
         </div>
     );
-    
 };
+
 
 export default PedidoDetalheClientePage;
