@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query'; // IMPORTAR useQuery
 import { formatCurrency } from '../lib/utils.js';
 import ProximosAgendamentos from './dashboard/ProximosAgendamentos.js';
 import PedidosPendentes from './dashboard/PedidosPendentes.js';
+import PagamentosAtrasados from './dashboard/PagamentosAtrasados.js';
 
 // --- Funções de Busca de Dados ---
 // Criamos funções separadas e exportáveis para cada busca de dados.
@@ -166,7 +167,9 @@ const DashboardPage = ({ onPedidoClick }) => {
                 <GraficoTopServicosApex />
             </div>
             
-            <div className="grid gap-6">
+             {/* 👇 NOVA LINHA PARA OS PAINÉIS FINAIS 👇 */}
+            <div className="grid gap-6 lg:grid-cols-2">
+                <PagamentosAtrasados onPedidoClick={onPedidoClick} />
                 <RankingTopClientes />
             </div>
         </div>
