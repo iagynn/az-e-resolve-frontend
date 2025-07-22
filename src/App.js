@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink as RouterNavLink } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query'; 
 
 // Páginas
 import DashboardPage from './pages/DashboardPage.js';
@@ -16,6 +17,7 @@ import ClienteDashboardPage from './pages/Cliente/ClienteDashboardPage.js';
 import PedidoDetalheClientePage from './pages/Cliente/PedidoDetalheClientePage.js';
 import AtivarContaPage from './pages/Public/AtivarContaPage.js';
 import StatusPedidoPage from './pages/Public/StatusPedidoPage.js'; // Assumindo que você irá criar este
+
 
 // Componentes
 import ClienteProtectedRoute from './components/ClienteProtectedRoute.js';
@@ -36,12 +38,19 @@ export default function App() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [updateTrigger, setUpdateTrigger] = useState(0);
 
-    const handleUpdate = () => {
-        setUpdateTrigger(prev => prev + 1);
-        // Também fechar o modal pode ser uma boa ideia para ver a atualização
+     const queryClient = useQueryClient();
+
+     const handleUpdateAndClose = () => {
+        // Invalida todas as queries que dependem dos pedidos, forçando a atualização
+        queryClient.invalidateQueries({ queryKey: ['pedidos'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        queryClient.invalidateQueries({ queryKey: ['proximosAgendamentos'] });
+        // Adicione aqui outras queries que precisam ser atualizadas
+        
+        // Fecha o modal
         setSelectedPedido(null);
     };
-
+    
     const handlePedidoClick = (pedido) => { setSelectedPedido(pedido); };
     const handleCloseModal = () => { setSelectedPedido(null); };
 
@@ -106,7 +115,7 @@ export default function App() {
                         <PedidoModal
                             pedido={selectedPedido}
                             onClose={handleCloseModal}
-                            onUpdate={handleUpdate}
+                              onUpdate={handleUpdateAndClose}
                             onAddPagamento={handleAddPagamento}
                             onRemovePagamento={handleRemovePagamento}
                         />

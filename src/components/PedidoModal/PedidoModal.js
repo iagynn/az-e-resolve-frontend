@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../../lib/utils.js';
+import { deletePedido } from '../../api/pedidosApi.js';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { updatePedidoStatus, submitOrcamento } from '../../api/pedidosApi.js';
+
 
 // --- Ícones ---
 const X = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg> );
@@ -66,6 +70,8 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
     const [lembreteNF, setLembreteNF] = useState('');
     const [custoDescricao, setCustoDescricao] = useState('');
     const [custoValor, setCustoValor] = useState('');
+    
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         if (pedido) {
@@ -104,19 +110,9 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
         }
     };
 
-    const handleDelete = async () => {
-        if (!window.confirm('Você tem certeza que deseja excluir este pedido? Esta ação é IRREVERSÍVEL.')) return;
-        setIsSubmitting(true);
-        try {
-            const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Falha ao excluir o pedido no servidor.');
-            toast.success('Pedido excluído com sucesso!');
-            onUpdate();
-            onClose();
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setIsSubmitting(false);
+     const handleDelete = () => {
+        if (window.confirm('Você tem certeza que deseja excluir este pedido? Esta ação é IRREVERSÍVEL.')) {
+            deleteMutation.mutate(pedido._id); // Apenas chama a mutação
         }
     };
 
@@ -131,38 +127,19 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
         }
     };
 
-    const handleUpdateStatus = async (newStatus) => {
-        if (newStatus === 'Finalizado' && !window.confirm('Tem a certeza que deseja finalizar este pedido?')) return;
-        setIsSubmitting(true);
-        try {
-            const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }), });
-            if (!response.ok) { throw new Error('Falha ao atualizar o status do pedido.'); }
-            toast.success(`Pedido movido para "${newStatus}"!`);
-            onUpdate();
-            onClose();
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+     const handleUpdateStatus = (newStatus) => { 
+        if (newStatus === 'Finalizado' && !window.confirm('...')) 
+            return; updateStatusMutation.mutate({ pedidoId: pedido._id, newStatus 
+        }); 
+        };
 
-    const handleSubmitOrcamento = async (e) => {
-        e.preventDefault();
-        if (!valorProposto || parseFloat(valorProposto) <= 0) { toast.error("Por favor, insira um valor de orçamento válido."); return; }
-        setIsSubmitting(true);
-        try {
-            const response = await fetch(`http://localhost:3000/api/orcamentos/${pedido._id}/submit`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valorProposto }), });
-            if (!response.ok) { throw new Error("Falha ao enviar o orçamento."); }
-            toast.success('Orçamento enviado com sucesso!');
-            onUpdate();
-            onClose();
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+     const handleSubmitOrcamento = (e) => 
+        { e.preventDefault(); 
+            if (!valorProposto || parseFloat(valorProposto) <= 0) 
+                { toast.error("..."); return; }
+             submitOrcamentoMutation.mutate({ pedidoId: pedido._id, valorProposto 
+             }); 
+            };
 
     const handleSchedule = async (newDate) => {
         setIsSubmitting(true);
@@ -252,9 +229,43 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
         setNovoMetodo('Pix');
         setNovaObservacao('');
     };
+    // Criar a mutação para apagar o pedido
+    const deleteMutation = useMutation({
+        mutationFn: deletePedido, // A função que faz a chamada à API
+        onSuccess: () => {
+            toast.success('Pedido excluído com sucesso!');
+            // Invalida a query 'pedidos', o que força a PedidosPage a buscar os dados novamente
+            queryClient.invalidateQueries({ queryKey: ['pedidos'] }); 
+            onClose(); // Fecha o modal
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        }
+    });
+      const updateStatusMutation = useMutation({
+         mutationFn: updatePedidoStatus,
+          onSuccess: (data) => {
+             toast.success(`Pedido movido para "${data.status}"!`);
+              queryClient.invalidateQueries({ queryKey: ['pedidos'] }); 
+              onClose(); 
+            },
+             onError: (err) => 
+                toast.error(err.message) 
+            });
+            const submitOrcamentoMutation = useMutation({
+                 mutationFn: submitOrcamento, 
+                 onSuccess: () => {
+                     toast.success('Orçamento enviado com sucesso!'); 
+                     queryClient.invalidateQueries({ queryKey: ['pedidos'] });
+                      onClose();
+                     },
+                      onError: (err) =>
+                         toast.error(err.message) 
+                    });
 
     if (!pedido) return null;
 
+    const isMutating = deleteMutation.isPending || updateStatusMutation.isPending || submitOrcamentoMutation.isPending;
     const podeExecutarAcoes = !['Finalizado', 'Rejeitado'].includes(pedido.status);
     const podeEnviarOrcamento = pedido.status === 'Pendente';
     const podeAgendar = ['Aceito', 'Agendado'].includes(pedido.status);
@@ -266,6 +277,7 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
         if (pedido.status === 'Rejeitado') return <div className="p-3 mb-6 bg-red-100 text-red-800 rounded-lg text-center">Este pedido foi rejeitado.</div>;
         return null;
     };
+    
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
