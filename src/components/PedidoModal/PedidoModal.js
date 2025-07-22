@@ -7,6 +7,7 @@ import { deletePedido } from '../../api/pedidosApi.js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updatePedidoStatus, submitOrcamento } from '../../api/pedidosApi.js';
 import ConfirmModal from '../ui/ConfirmModal.js';
+import { Button } from '../ui/Button.jsx';  
 
 
 // --- Ícones ---
@@ -421,12 +422,24 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
 
                 {podeExecutarAcoes && (
                     <footer className="p-4 bg-gray-100 border-t flex justify-end space-x-3">
-                        <button onClick={() => handleUpdateStatus('Rejeitado')} disabled={isSubmitting} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Rejeitar Pedido</button>
-                        <button onClick={() => handleUpdateStatus('Finalizado')} disabled={isSubmitting || !podeAgendar} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-green-300">Marcar como Finalizado</button>
-                    </footer>
+                        <Button onClick={() => handleUpdateStatus('Rejeitado')} disabled={isMutating} variant="destructive">
+                                {updateStatusMutation.isPending ? 'Aguarde...' : 'Rejeitar Pedido'}
+                            </Button>
+                            <Button onClick={() => handleUpdateStatus('Finalizado')} disabled={isMutating || !podeAgendar}>
+                                {updateStatusMutation.isPending ? 'Aguarde...' : 'Marcar como Finalizado'}
+                            </Button>
+                        </footer>
                 )}
             </div>
         </div>  
+         <ConfirmModal 
+            isOpen={confirmation.isOpen}
+            title={confirmation.title}
+            message={confirmation.message}
+            onConfirm={confirmation.onConfirm}
+            onCancel={() => setConfirmation({ isOpen: false })}
+        />
     </>
 );
+    
 }

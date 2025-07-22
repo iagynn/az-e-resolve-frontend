@@ -53,7 +53,6 @@ export default function App() {
     
     const handlePedidoClick = (pedido) => { setSelectedPedido(pedido); };
     const handleCloseModal = () => { setSelectedPedido(null); };
-
     const handleAddPagamento = async (pagamentoData) => { /* ... sua lógica de fetch ... */ };
     const handleRemovePagamento = async (pagamentoId) => { /* ... sua lógica de fetch ... */ };
 
@@ -61,10 +60,13 @@ export default function App() {
         <RouterNavLink
             to={to}
             className={({ isActive }) =>
-                `w-full flex items-center space-x-3 px-4 py-3 transition-colors duration-200 rounded-lg ${isActive ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'
-                }`
-            }
-        >
+                      `w-full flex items-center space-x-3 px-4 py-2.5 transition-colors duration-200 rounded-md text-sm font-medium ${
+                isActive 
+                    ? 'bg-primary text-primary-foreground shadow-sm' // Adicionado shadow
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            }`
+        }
+    >
             <Icon className="h-5 w-5" />
             <span className={`font-medium ${!isSidebarOpen && 'hidden'}`}>{label}</span>
         </RouterNavLink>
@@ -80,13 +82,15 @@ export default function App() {
                 <Route path="/cliente/dashboard" element={<ClienteProtectedRoute><ClienteDashboardPage /></ClienteProtectedRoute>} />
                 <Route path="/cliente/pedidos/:id" element={<ClienteProtectedRoute><PedidoDetalheClientePage /></ClienteProtectedRoute>} />
                 
-                <Route path="/*" element={
-                    <div className="flex h-screen bg-gray-100 font-sans">
-                        <aside className={`bg-white text-gray-800 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
-                            <div className="flex items-center justify-between p-4 border-b">
-                                <h1 className={`text-xl font-bold text-blue-700 ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1>
-                                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-gray-200">{isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
-                            </div>
+                 <Route path="/*" element={
+                <div className="flex h-screen bg-secondary font-sans"> {/* 1. Fundo cinza suave para toda a área */}
+                    <aside className={`bg-background text-foreground transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}> {/* 2. Fundo branco para a sidebar */}
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <h1 className={`text-xl font-bold text-primary ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1> {/* 3. Usando a cor primária para o título */}
+                            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg text-muted-foreground hover:bg-accent">
+                                {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                            </button>
+                        </div>
                             <nav className="mt-6 px-4 space-y-2">
                                 <NavLink to="/" label="Dashboard" icon={LayoutDashboard} />
                                 <NavLink to="/pedidos" label="Pedidos" icon={List} />

@@ -60,12 +60,13 @@ function GraficoFinanceiroApex() {
         { name: 'Despesas', data: data?.map(item => item.despesas) || [] },
         { name: 'Lucro', data: data?.map(item => item.lucro) || [] }
     ];
-    const options = {
+     const options = {
         chart: { type: 'area', height: '100%', toolbar: { show: false } },
         stroke: { curve: 'smooth', width: 2 },
-        colors: ['#3b82f6', '#ef4444', '#22c55e'],
+        // 👇 CORES ATUALIZADAS AQUI 👇
+        colors: ['hsl(var(--primary))', 'hsl(var(--destructive))', '#22c55e'], // Azul, Vermelho e um Verde para o lucro
         xaxis: { categories: data?.map(item => item.mes) || [] },
-        yaxis: { labels: { formatter: (value) => `R$ ${value}` } },
+        yaxis: { labels: { formatter: (value) => formatCurrency(value) } },
         tooltip: { y: { formatter: (value) => formatCurrency(value) } },
         dataLabels: { enabled: false }
     };
@@ -91,10 +92,12 @@ function GraficoTopServicosApex() {
     if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-red-500">{error.message}</p></CardContent></Card>;
 
     const series = data?.map(item => item.value) || [];
-    const options = {
+ const options = {
         chart: { type: 'donut', height: '100%' },
         labels: data?.map(item => item.name) || [],
         legend: { position: 'bottom' },
+        // 👇 CORES ATUALIZADAS AQUI 👇
+        colors: ['hsl(var(--primary))', 'hsl(var(--secondary-foreground))', 'hsl(var(--muted-foreground))', '#3b82f6', '#64748b'],
         tooltip: { y: { formatter: (value) => `${value} pedidos` } }
     };
 
@@ -150,7 +153,7 @@ const DashboardPage = ({ onPedidoClick }) => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800">Visão Geral do Negócio</h1>
+           <h1 className="text-2xl font-bold tracking-tight text-foreground">Visão Geral do Negócio</h1>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="Novas Solicitações (Mês)" value={dashboardData?.stats?.novasSolicitacoes || 0} isLoading={isLoading} />
                 <StatCard title="Faturamento (Mês)" value={formatCurrency(dashboardData?.stats?.faturamento)} isLoading={isLoading} />
