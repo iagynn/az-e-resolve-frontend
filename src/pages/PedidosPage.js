@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'; // <-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // <-- ADICIONADO
 import { toast } from 'react-hot-toast'; // <-- ADICIONADO
 import KanbanSkeleton from '../components/skeletons/KanbanSkeleton.js';
+import { motion } from 'framer-motion';
 
 // --- Funções Auxiliares e Ícones ---
 const DollarSign = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> );
@@ -148,7 +149,7 @@ function PedidosPage({ onPedidoClick }) {
                                                 return (
                                                     <Draggable key={pedido._id} draggableId={pedido._id} index={index}>
                                                         {(provided, snapshot) => (
-                                                            <div
+                                                              <motion.div
                                                                 ref={provided.innerRef}
                                                                 {...provided.draggableProps}
                                                                 {...provided.dragHandleProps}
@@ -156,7 +157,12 @@ function PedidosPage({ onPedidoClick }) {
                                                                 className={`bg-white p-4 rounded-lg shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 
                                                                     ${snapshot.isDragging ? 'shadow-2xl rotate-3 scale-105' : ''}
                                                                     ${precisaAtencao ? 'border-2 border-red-500' : ''}
-                                                                `}
+                                                              `}
+                                                             
+                                                                // 3. Adicionar as propriedades da animação
+                                                                initial={{ opacity: 0, y: 20 }} // Estado inicial: invisível e 20px para baixo
+                                                                animate={{ opacity: 1, y: 0 }}   // Estado final: visível e na posição original
+                                                                transition={{ delay: index * 0.05 }} // Atraso escalonado para cada cartão
                                                             >
                                                                 <div className="flex justify-between items-start">
                                                                     <p className="font-bold text-gray-800 pr-2">Pedido #{pedido.shortId}</p>
@@ -177,7 +183,7 @@ function PedidosPage({ onPedidoClick }) {
                                                                         </div>
                                                                     </div>
                                                                 )}
-                                                            </div>
+                                                            </motion.div>
                                                         )}
                                                     </Draggable>
                                                 )
