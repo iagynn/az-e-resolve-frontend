@@ -77,18 +77,15 @@ export default function App() {
                 <Route path="/status/:publicId" element={<StatusPedidoPage />} />
                 <Route path="/cliente/login" element={<ClienteLoginPage />} />
                 <Route path="/ativar-conta/:token" element={<AtivarContaPage />} />
-
                 <Route path="/cliente/dashboard" element={<ClienteProtectedRoute><ClienteDashboardPage /></ClienteProtectedRoute>} />
                 <Route path="/cliente/pedidos/:id" element={<ClienteProtectedRoute><PedidoDetalheClientePage /></ClienteProtectedRoute>} />
-
+                
                 <Route path="/*" element={
                     <div className="flex h-screen bg-gray-100 font-sans">
                         <aside className={`bg-white text-gray-800 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
                             <div className="flex items-center justify-between p-4 border-b">
                                 <h1 className={`text-xl font-bold text-blue-700 ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1>
-                                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-gray-200">
-                                    {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                                </button>
+                                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg hover:bg-gray-200">{isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
                             </div>
                             <nav className="mt-6 px-4 space-y-2">
                                 <NavLink to="/" label="Dashboard" icon={LayoutDashboard} />
@@ -103,19 +100,20 @@ export default function App() {
                         <main className="flex-1 flex flex-col overflow-hidden">
                             <div className="flex-1 p-6 overflow-y-auto">
                                 <Routes>
-                                    <Route path="/" element={<DashboardPage />} />
-                                    <Route path="/pedidos" element={<PedidosPage key={updateTrigger} onPedidoClick={handlePedidoClick} />} />
-                                    <Route path="/clientes" element={<ClientesPage />} />
-                                    <Route path="/agenda" element={<AgendaPage onPedidoClick={handlePedidoClick} />} />
-                                    <Route path="/financeiro" element={<FinanceiroPage />} />
-                                    <Route path="/estoque" element={<EstoquePage />} />
+                                    {/* 👇 AS ALTERAÇÕES ESTÃO AQUI 👇 */}
+                                    <Route index element={<DashboardPage onPedidoClick={handlePedidoClick} />} />
+                                    <Route path="pedidos" element={<PedidosPage onPedidoClick={handlePedidoClick} />} />
+                                    <Route path="clientes" element={<ClientesPage />} />
+                                    <Route path="agenda" element={<AgendaPage onPedidoClick={handlePedidoClick} />} />
+                                    <Route path="financeiro" element={<FinanceiroPage />} />
+                                    <Route path="estoque" element={<EstoquePage />} />
                                 </Routes>
                             </div>
                         </main>
                         <PedidoModal
                             pedido={selectedPedido}
                             onClose={handleCloseModal}
-                              onUpdate={handleUpdateAndClose}
+                            onUpdate={handleUpdateAndClose}
                             onAddPagamento={handleAddPagamento}
                             onRemovePagamento={handleRemovePagamento}
                         />

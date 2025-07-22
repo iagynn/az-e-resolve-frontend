@@ -6,6 +6,7 @@ import Chart from 'react-apexcharts';
 import { useQuery } from '@tanstack/react-query'; // IMPORTAR useQuery
 import { formatCurrency } from '../lib/utils.js';
 import ProximosAgendamentos from './dashboard/ProximosAgendamentos.js';
+import PedidosPendentes from './dashboard/PedidosPendentes.js';
 
 // --- Funções de Busca de Dados ---
 // Criamos funções separadas e exportáveis para cada busca de dados.
@@ -137,12 +138,11 @@ function RankingTopClientes() {
 }
 
 // --- Componente Principal da Página ---
-const DashboardPage = () => {
+const DashboardPage = ({ onPedidoClick }) => { 
     const { data: dashboardData, isLoading, error } = useQuery({
         queryKey: ['dashboardStats'],
         queryFn: fetchDashboardStats
     });
-
     if (error) {
         return <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert"><strong className="font-bold">Ocorreu um erro no servidor!</strong><pre className="mt-2 text-xs">{error.message}</pre></div>;
     }
@@ -156,12 +156,16 @@ const DashboardPage = () => {
                 <StatCard title="Receitas Futuras" value={formatCurrency(dashboardData?.stats?.receitasFuturas)} isLoading={isLoading} />
                 <StatCard title="Satisfação Média" value={dashboardData ? `${(dashboardData.stats.satisfacaoMedia || 0).toFixed(1)}/5` : 'N/A'} isLoading={isLoading} />
             </div>
-            <div className="grid gap-6 lg:grid-cols-2">
+             <div className="grid gap-6 lg:grid-cols-2">
+                <ProximosAgendamentos onPedidoClick={onPedidoClick} />
+                <PedidosPendentes onPedidoClick={onPedidoClick} />
+            </div>
+            
+             <div className="grid gap-6 lg:grid-cols-2">
                 <GraficoFinanceiroApex />
-                   <ProximosAgendamentos />
-                {/* Aqui poderia entrar outro card, como "Últimos Pedidos" */}
                 <GraficoTopServicosApex />
             </div>
+            
             <div className="grid gap-6">
                 <RankingTopClientes />
             </div>

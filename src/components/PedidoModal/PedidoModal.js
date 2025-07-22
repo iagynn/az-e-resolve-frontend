@@ -6,6 +6,7 @@ import { formatCurrency } from '../../lib/utils.js';
 import { deletePedido } from '../../api/pedidosApi.js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updatePedidoStatus, submitOrcamento } from '../../api/pedidosApi.js';
+import ConfirmModal from '../ui/ConfirmModal.js';
 
 
 // --- Ícones ---
@@ -70,6 +71,7 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
     const [lembreteNF, setLembreteNF] = useState('');
     const [custoDescricao, setCustoDescricao] = useState('');
     const [custoValor, setCustoValor] = useState('');
+    const [confirmation, setConfirmation] = useState({ isOpen: false });
     
     const queryClient = useQueryClient();
 
@@ -111,9 +113,16 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
     };
 
      const handleDelete = () => {
-        if (window.confirm('Você tem certeza que deseja excluir este pedido? Esta ação é IRREVERSÍVEL.')) {
-            deleteMutation.mutate(pedido._id); // Apenas chama a mutação
-        }
+        // 3. Em vez de `window.confirm`, abrimos o nosso modal
+        setConfirmation({
+            isOpen: true,
+            title: "Confirmar Exclusão",
+            message: "Tem a certeza que deseja excluir este pedido? Esta ação é irreversível.",
+            onConfirm: () => {
+                deleteMutation.mutate(pedido._id);
+                setConfirmation({ isOpen: false }); // Fecha o modal após confirmar
+            }
+        });
     };
 
     const handleCopyPublicLink = async () => {
@@ -127,11 +136,23 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
         }
     };
 
-     const handleUpdateStatus = (newStatus) => { 
-        if (newStatus === 'Finalizado' && !window.confirm('...')) 
-            return; updateStatusMutation.mutate({ pedidoId: pedido._id, newStatus 
-        }); 
-        };
+     const handleUpdateStatus = (newStatus) => {
+        if (newStatus === 'Finalizado') {
+            // 4. Também usamos o nosso modal para confirmar a finalização
+            setConfirmation({
+                isOpen: true,
+                title: "Confirmar Finalização",
+                message: "Tem a certeza que deseja marcar este pedido como finalizado?",
+                onConfirm: () => {
+                    updateStatusMutation.mutate({ pedidoId: pedido._id, newStatus });
+                    setConfirmation({ isOpen: false });
+                }
+            });
+        } else {
+            // Para outros status, como "Rejeitado", atualizamos diretamente
+            updateStatusMutation.mutate({ pedidoId: pedido._id, newStatus });
+        }
+    };
 
      const handleSubmitOrcamento = (e) => 
         { e.preventDefault(); 
@@ -280,6 +301,7 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
     
 
     return (
+         <>
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <header className="flex justify-between items-center p-4 border-b">
@@ -404,6 +426,7 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
                     </footer>
                 )}
             </div>
-        </div>
-    );
+        </div>  
+    </>
+);
 }
