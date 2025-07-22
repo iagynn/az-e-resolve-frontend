@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.
 import Chart from 'react-apexcharts';
 import { useQuery } from '@tanstack/react-query'; // IMPORTAR useQuery
 import { formatCurrency } from '../lib/utils.js';
+import ProximosAgendamentos from './dashboard/ProximosAgendamentos.js';
 
 // --- Funções de Busca de Dados ---
 // Criamos funções separadas e exportáveis para cada busca de dados.
@@ -157,6 +158,8 @@ const DashboardPage = () => {
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
                 <GraficoFinanceiroApex />
+                   <ProximosAgendamentos />
+                {/* Aqui poderia entrar outro card, como "Últimos Pedidos" */}
                 <GraficoTopServicosApex />
             </div>
             <div className="grid gap-6">
