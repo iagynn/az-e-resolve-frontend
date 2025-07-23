@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink as RouterNavLink } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query'; 
-
+import VisibilidadePage from './pages/VisibilidadePage.js'; 
+import FornecedoresPage from './pages/FornecedoresPage.js';
 // Páginas
 import DashboardPage from './pages/DashboardPage.js';
 import PedidosPage from './pages/PedidosPage.js';
@@ -17,6 +18,7 @@ import ClienteDashboardPage from './pages/Cliente/ClienteDashboardPage.js';
 import PedidoDetalheClientePage from './pages/Cliente/PedidoDetalheClientePage.js';
 import AtivarContaPage from './pages/Public/AtivarContaPage.js';
 import StatusPedidoPage from './pages/Public/StatusPedidoPage.js'; // Assumindo que você irá criar este
+import TalentosPage from './pages/TalentosPage.js'; 
 
 
 // Componentes
@@ -32,6 +34,9 @@ const Menu = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" hei
 const Calendar = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg> );
 const Wallet = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" /></svg> );
 const Archive = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="2" y="5" width="20" height="14" rx="2" ry="2" /><line x1="10" x2="14" y1="9" y2="9" /></svg> );
+const MapPin = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> );
+const ShoppingCart = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> );
+const Briefcase = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg> );
 
 export default function App() {
     const [selectedPedido, setSelectedPedido] = useState(null);
@@ -97,7 +102,10 @@ export default function App() {
                                 <NavLink to="/agenda" label="Agenda" icon={Calendar} />
                                 <NavLink to="/financeiro" label="Financeiro" icon={Wallet} />
                                 <NavLink to="/estoque" label="Estoque" icon={Archive} />
+                                 <NavLink to="/fornecedores" label="Fornecedores" icon={ShoppingCart} /> 
                                 <NavLink to="/clientes" label="Clientes" icon={Users} />
+                                <NavLink to="/talentos" label="Talentos" icon={Briefcase} />
+                                 <NavLink to="/visibilidade" label="Mercado" icon={MapPin} />
                                 <NavLink to="/configuracoes" label="Configurações" icon={Settings} />
                             </nav>
                         </aside>
@@ -111,6 +119,10 @@ export default function App() {
                                     <Route path="agenda" element={<AgendaPage onPedidoClick={handlePedidoClick} />} />
                                     <Route path="financeiro" element={<FinanceiroPage />} />
                                     <Route path="estoque" element={<EstoquePage />} />
+                                     <Route path="talentos" element={<TalentosPage />} /> {/* 3. NOVA ROTA ADICIONADA */}
+                                    <Route path="fornecedores" element={<FornecedoresPage />} /> {/* 3. NOVA ROTA */}
+                                     <Route path="visibilidade" element={<VisibilidadePage onPedidoClick={handlePedidoClick} />} />
+                                    <Route path="configuracoes" element={<div>Página de Configurações em construção...</div>} />
                                 </Routes>
                             </div>
                         </main>

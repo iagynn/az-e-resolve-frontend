@@ -3,6 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../components/ui/card.jsx";
+import { Button } from '../components/ui/Button.jsx';
+
 
 // --- Funções Auxiliares ---
 const formatCurrency = (value) => {
@@ -108,49 +111,50 @@ function ClientesPage() {
     if (error) return <div className="p-4 text-center text-red-500">Erro ao buscar dados: {error.message}</div>;
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Gestão de Clientes</h1>
-                <input type="text" placeholder="Buscar por nome ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-1/3 p-2 border rounded-lg" />
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Gestão de Clientes</h1>
+                <input type="text" placeholder="Buscar por nome ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full max-w-sm p-2 border rounded-md" />
             </div>
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefone</th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total de Pedidos</th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                        {filteredClientes.map((cliente) => (
-                            <React.Fragment key={cliente._id}>
-                                <tr onClick={() => handleRowClick(cliente._id)} className="cursor-pointer hover:bg-gray-100">
-                                    <td className="px-6 py-4 whitespace-nowrap">{cliente.nome}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">{cliente.telefone}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">{cliente.totalPedidos}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                                        <button onClick={(event) => handleEnviarConvite(cliente._id, event)} className="text-blue-600 hover:text-blue-800 font-semibold text-sm" title="Enviar convite para o portal">
-                                            Convidar
-                                        </button>
-                                    </td>
-                                </tr>
-                                {expandedClientId === cliente._id && (
-                                    <tr>
-                                        <td colSpan="4" className="p-0 bg-gray-50">
-                                            <ClientOrdersTable pedidos={clientDetails[cliente._id]} />
-                                        </td>
-                                    </tr>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
-                {isSuccess && filteredClientes.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">Nenhum cliente encontrado.</p>
-                )}
-            </div>
+            
+            {isSuccess && filteredClientes.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredClientes.map((cliente) => (
+                        <div key={cliente._id}>
+                            <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-200">
+                                <CardHeader>
+                                    <CardTitle>{cliente.nome}</CardTitle>
+                                    <p className="text-sm text-muted-foreground">{cliente.telefone}</p>
+                                </CardHeader>
+                                <CardContent className="flex-grow space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Pedidos:</span>
+                                        <span className="font-semibold">{cliente.totalPedidos}</span>
+                                    </div>
+                                    {/* Adicionar mais dados aqui no futuro, como "Total Gasto" */}
+                                </CardContent>
+                                <CardFooter className="flex flex-col items-stretch space-y-2">
+                                    <Button variant="outline" onClick={() => handleRowClick(cliente._id)}>
+                                        {expandedClientId === cliente._id ? 'Ocultar Pedidos' : 'Ver Pedidos'}
+                                    </Button>
+                                    <Button size="sm" onClick={(e) => handleEnviarConvite(cliente._id, e)}>
+                                        Convidar para o Portal
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                            {expandedClientId === cliente._id && (
+                                <div className="mt-2">
+                                    <ClientOrdersTable pedidos={clientDetails[cliente._id]} />
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-16">
+                    <p>Nenhum cliente encontrado.</p>
+                </div>
+            )}
         </div>
     );
 }

@@ -8,6 +8,7 @@ import { formatCurrency } from '../lib/utils.js';
 import ProximosAgendamentos from './dashboard/ProximosAgendamentos.js';
 import PedidosPendentes from './dashboard/PedidosPendentes.js';
 import PagamentosAtrasados from './dashboard/PagamentosAtrasados.js';
+import TopRegioes from './dashboard/TopRegioes.js';
 
 // --- Funções de Busca de Dados ---
 // Criamos funções separadas e exportáveis para cada busca de dados.
@@ -174,6 +175,7 @@ const DashboardPage = ({ onPedidoClick }) => {
             <div className="grid gap-6 lg:grid-cols-2">
                 <PagamentosAtrasados onPedidoClick={onPedidoClick} />
                 <RankingTopClientes />
+                 <TopRegioes />
             </div>
         </div>
     );
