@@ -127,10 +127,14 @@ function ClientesPage() {
                                     <p className="text-sm text-muted-foreground">{cliente.telefone}</p>
                                 </CardHeader>
                                 <CardContent className="flex-grow space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Pedidos:</span>
-                                        <span className="font-semibold">{cliente.totalPedidos}</span>
-                                    </div>
+                                     <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Pedidos Totais:</span>
+                                    <span className="font-semibold">{cliente.totalPedidos}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Valor Gasto:</span>
+                                    <span className="font-bold text-primary">{formatCurrency(cliente.valorTotalGasto)}</span>
+                                </div>
                                     {/* Adicionar mais dados aqui no futuro, como "Total Gasto" */}
                                 </CardContent>
                                 <CardFooter className="flex flex-col items-stretch space-y-2">

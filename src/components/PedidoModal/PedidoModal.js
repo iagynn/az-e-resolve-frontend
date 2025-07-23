@@ -1,6 +1,6 @@
 // src/components/PedidoModal/PedidoModal.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { formatCurrency } from '../../lib/utils.js';
 import { deletePedido } from '../../api/pedidosApi.js';
@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updatePedidoStatus, submitOrcamento } from '../../api/pedidosApi.js';
 import ConfirmModal from '../ui/ConfirmModal.js';
 import { Button } from '../ui/Button.jsx';  
+import {  marcarComoPago } from '../../api/pedidosApi.js'; 
 
 
 // --- Ícones ---
@@ -73,30 +74,9 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
     const [custoDescricao, setCustoDescricao] = useState('');
     const [custoValor, setCustoValor] = useState('');
     const [confirmation, setConfirmation] = useState({ isOpen: false });
-    
     const queryClient = useQueryClient();
 
-    useEffect(() => {
-        if (pedido) {
-            setValorProposto(pedido.valorProposto ? String(pedido.valorProposto) : '');
-            setNotas(pedido.notasInternas || '');
-            setIsScheduling(false);
-            setSaveStatus('idle');
-            setAnotacoes(pedido.anotacoesTecnicas || '');
-            setLembreteNF(pedido.lembreteNotaFiscal || '');
-            const fetchProdutos = async () => {
-                try {
-                    const response = await fetch('http://localhost:3000/api/produtos');
-                    if (!response.ok) return;
-                    const data = await response.json();
-                    setProdutosDisponiveis(data);
-                    if (data.length > 0) { setProdutoSelecionadoId(data[0]._id); }
-                } catch (error) { console.error("Erro ao buscar produtos para o modal:", error); }
-            };
-            fetchProdutos();
-        }
-    }, [pedido]);
-
+  
     // Todas as funções de manipulação de eventos
     const handleSaveNotas = async () => {
         setSaveStatus('saving');
@@ -284,15 +264,64 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
                       onError: (err) =>
                          toast.error(err.message) 
                     });
+                    const marcarPagoMutation = useMutation({
+        mutationFn: marcarComoPago,
+        onSuccess: () => {
+            toast.success("Pedido liquidado com sucesso!");
+            queryClient.invalidateQueries({ queryKey: ['pedidos'] });
+            onClose();
+        },
+        onError: (err) => toast.error(err.message),
+    });
 
+    // --- Funções de Manipulação ---
+    const handleMarcarComoPago = () => {
+        marcarPagoMutation.mutate(pedido._id);
+    };
+      useEffect(() => {
+        if (pedido) {
+            setValorProposto(pedido.valorProposto ? String(pedido.valorProposto) : '');
+            setNotas(pedido.notasInternas || '');
+            setIsScheduling(false);
+            setSaveStatus('idle');
+            setAnotacoes(pedido.anotacoesTecnicas || '');
+            setLembreteNF(pedido.lembreteNotaFiscal || '');
+            const fetchProdutos = async () => {
+                try {
+                    const response = await fetch('http://localhost:3000/api/produtos');
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    setProdutosDisponiveis(data);
+                    if (data.length > 0) { setProdutoSelecionadoId(data[0]._id); }
+                } catch (error) { console.error("Erro ao buscar produtos para o modal:", error); }
+            };
+            fetchProdutos();
+        }
+    }, [pedido]);
+    // --- Cálculos Financeiros com useMemo ---
+       const { saldoDevedor, custosTotais, lucroReal } = useMemo(() => {
+        if (!pedido) {
+            return { saldoDevedor: 0, custosTotais: 0, lucroReal: 0 };
+        }
+        const valorProposto = pedido.valorProposto || 0;
+        const totalPagoCalc = pedido.pagamentos?.reduce((acc, p) => acc + p.valor, 0) || 0;
+        const saldoDevedorCalc = valorProposto - totalPagoCalc;
+        const custosMateriais = pedido.materiaisUsados?.reduce((acc, item) => acc + (item.custoNoMomento * item.quantidade), 0) || 0;
+        const outrosCustos = pedido.custosMateriais?.reduce((acc, custo) => acc + custo.valor, 0) || 0;
+        const custosTotaisCalc = custosMateriais + outrosCustos;
+        const lucroRealCalc = valorProposto - custosTotaisCalc;
+        return { saldoDevedor: saldoDevedorCalc, custosTotais: custosTotaisCalc, lucroReal: lucroRealCalc };
+    }, [pedido]);
+
+    // --- 2. A VERIFICAÇÃO VEM DEPOIS DE TODOS OS HOOKS ---
+    if (!pedido) {
+        return null;
+    }
     if (!pedido) return null;
-
-    const isMutating = deleteMutation.isPending || updateStatusMutation.isPending || submitOrcamentoMutation.isPending;
+    
+     const isMutating = deleteMutation.isPending || updateStatusMutation.isPending || submitOrcamentoMutation.isPending || marcarPagoMutation.isPending;
     const podeExecutarAcoes = !['Finalizado', 'Rejeitado'].includes(pedido.status);
-    const podeEnviarOrcamento = pedido.status === 'Pendente';
     const podeAgendar = ['Aceito', 'Agendado'].includes(pedido.status);
-    const totalPago = pedido.pagamentos?.reduce((acc, p) => acc + p.valor, 0) || 0;
-    const saldoDevedor = (pedido.valorProposto || 0) - totalPago;
 
     const StatusBanner = () => {
         if (pedido.status === 'Finalizado') return <div className="p-3 mb-6 bg-green-100 text-green-800 rounded-lg text-center">Este pedido foi finalizado.</div>;
@@ -329,24 +358,20 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
                             )}
                         </TabPane>
 
-                        <TabPane label="Financeiro">
-                            {podeEnviarOrcamento && (
-                                <form onSubmit={handleSubmitOrcamento} className="pb-6 mb-6 border-b">
-                                    <h3 className="text-lg font-semibold text-gray-800">Enviar Orçamento</h3>
-                                    <div className="flex items-center space-x-4 mt-2">
-                                        <input type="number" step="0.01" placeholder="Ex: 350.50" value={valorProposto} onChange={(e) => setValorProposto(e.target.value)} className="flex-1 p-2 border rounded-lg" disabled={isSubmitting} />
-                                        <button type="submit" disabled={isSubmitting || !valorProposto} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
-                                            {isSubmitting ? "A enviar..." : "Enviar e Aceitar"}
-                                        </button>
+                       <TabPane label="Financeiro">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-center border p-4 rounded-lg">
+                                    <div><p className="text-sm text-muted-foreground">Valor Total</p><p className="text-xl font-bold text-primary">{formatCurrency(pedido.valorProposto)}</p></div>
+                                    <div><p className="text-sm text-muted-foreground">Custos Totais</p><p className="text-xl font-bold text-destructive">{formatCurrency(custosTotais)}</p></div>
+                                    <div><p className="text-sm text-muted-foreground">Lucro Bruto</p><p className={`text-xl font-bold ${lucroReal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(lucroReal)}</p></div>
+                                    <div><p className="text-sm text-muted-foreground">Saldo Devedor</p><p className="text-xl font-bold text-yellow-600">{formatCurrency(saldoDevedor)}</p></div>
+                                </div>
+                                {saldoDevedor > 0 && pedido.status === 'Finalizado' && (
+                                    <div className="mb-6">
+                                        <Button onClick={handleMarcarComoPago} disabled={isMutating} className="w-full bg-green-600 hover:bg-green-700">
+                                            {marcarPagoMutation.isPending ? 'A liquidar...' : 'Ação Rápida: Marcar como Totalmente Pago'}
+                                        </Button>
                                     </div>
-                                </form>
                             )}
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Controle de Pagamentos</h3>
-                            <div className="grid grid-cols-3 gap-4 mb-6 text-center">
-                                <div><p className="text-sm text-gray-500">Valor Total</p><p className="text-xl font-bold text-blue-600">{formatCurrency(pedido.valorProposto)}</p></div>
-                                <div><p className="text-sm text-gray-500">Total Pago</p><p className="text-xl font-bold text-green-600">{formatCurrency(totalPago)}</p></div>
-                                <div><p className="text-sm text-gray-500">Saldo Devedor</p><p className={`text-xl font-bold ${saldoDevedor > 0 ? 'text-red-600' : 'text-gray-700'}`}>{formatCurrency(saldoDevedor)}</p></div>
-                            </div>
                             <div className="mb-6">
                                 <h4 className="font-semibold text-gray-700 mb-2">Histórico de Pagamentos</h4>
                                 {pedido.pagamentos && pedido.pagamentos.length > 0 ? (

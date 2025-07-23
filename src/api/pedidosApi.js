@@ -32,5 +32,14 @@ export const submitOrcamento = async ({ pedidoId, valorProposto }) => {
     }
     return response.json();
 };
+export const marcarComoPago = async (pedidoId) => {
+    const response = await fetch(`http://localhost:3000/api/orcamentos/${pedidoId}/marcar-pago`, {
+        method: 'POST',
+    });
+    if (!response.ok) {
+        throw new Error('Não foi possível marcar o pedido como pago.');
+    }
+    return response.json();
+};
 
 // Pode adicionar aqui outras funções de API (schedule, addMaterial, etc.) no futuro
