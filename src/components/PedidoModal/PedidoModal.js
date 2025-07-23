@@ -9,6 +9,7 @@ import { updatePedidoStatus, submitOrcamento } from '../../api/pedidosApi.js';
 import ConfirmModal from '../ui/ConfirmModal.js';
 import { Button } from '../ui/Button.jsx';  
 import {  marcarComoPago } from '../../api/pedidosApi.js'; 
+import Checklist from '../pedidos/Checklist.js';
 
 
 // --- Ícones ---
@@ -387,6 +388,9 @@ export default function PedidoModal({ pedido, onClose, onUpdate, onAddPagamento,
                                 </form>
                             )}
                         </TabPane>
+                        <TabPane label="Plano de Execução">
+                                <Checklist pedido={pedido} />
+                            </TabPane>
 
                         <TabPane label="Operacional">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
