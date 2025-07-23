@@ -1,9 +1,10 @@
 // src/pages/FornecedoresPage.js
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // O useState já está aqui, ótimo!
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.jsx";
 import { Button } from '../components/ui/Button.jsx';
 import AddFornecedorModal from '../components/modals/AddFornecedorModal.js';
+import ProdutosFornecedorModal from '../components/modals/ProdutosFornecedorModal.js';
 
 const fetchFornecedores = async () => {
     const response = await fetch('http://localhost:3000/api/fornecedores');
@@ -14,7 +15,8 @@ const fetchFornecedores = async () => {
 };
 
 const FornecedoresPage = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [selectedFornecedor, setSelectedFornecedor] = useState(null); // <-- A LINHA QUE FALTAVA
     const queryClient = useQueryClient();
 
     const { data: fornecedores, isLoading, error, isSuccess } = useQuery({
@@ -23,7 +25,6 @@ const FornecedoresPage = () => {
     });
 
     const handleFornecedorAdicionado = () => {
-        // Quando um novo fornecedor é adicionado, invalidamos o cache para buscar a lista atualizada
         queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
     };
 
@@ -32,7 +33,8 @@ const FornecedoresPage = () => {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Catálogo de Fornecedores</h1>
-                    <Button onClick={() => setIsModalOpen(true)}>Sugerir Novo Fornecedor</Button>
+                    {/* Botão para abrir o modal de adicionar */}
+                    <Button onClick={() => setIsAddModalOpen(true)}>Adicionar Fornecedor</Button>
                 </div>
                 
                 {isLoading && (
@@ -59,7 +61,10 @@ const FornecedoresPage = () => {
                                     </div>
                                 </CardHeader>
                                 <CardContent className="flex-grow flex items-end">
-                                    <Button variant="outline" className="w-full">Ver Produtos</Button>
+                                    {/* Botão para abrir o modal de produtos */}
+                                    <Button variant="outline" className="w-full" onClick={() => setSelectedFornecedor(fornecedor)}>
+                                        Ver Produtos
+                                    </Button>
                                 </CardContent>
                             </Card>
                         ))}
@@ -69,15 +74,20 @@ const FornecedoresPage = () => {
                 {isSuccess && fornecedores.length === 0 && (
                      <div className="text-center text-muted-foreground py-16">
                         <p>Nenhum fornecedor encontrado.</p>
-                        <p className="text-sm mt-2">Clique em "Sugerir Novo Fornecedor" para adicionar o seu primeiro parceiro.</p>
+                        <p className="text-sm mt-2">Clique em "Adicionar Fornecedor" para criar o seu primeiro parceiro.</p>
                     </div>
                 )}
             </div>
 
             <AddFornecedorModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
                 onFornecedorAdicionado={handleFornecedorAdicionado}
+            />
+            
+            <ProdutosFornecedorModal
+                fornecedor={selectedFornecedor}
+                onClose={() => setSelectedFornecedor(null)}
             />
         </>
     );
