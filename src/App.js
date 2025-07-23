@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query'; 
 import VisibilidadePage from './pages/VisibilidadePage.js'; 
 import FornecedoresPage from './pages/FornecedoresPage.js';
+import ConfiguracoesPage from './pages/ConfiguracoesPage.js';
 // Páginas
 import DashboardPage from './pages/DashboardPage.js';
 import PedidosPage from './pages/PedidosPage.js';
@@ -120,9 +121,9 @@ export default function App() {
                                     <Route path="financeiro" element={<FinanceiroPage />} />
                                     <Route path="estoque" element={<EstoquePage />} />
                                      <Route path="talentos" element={<TalentosPage />} /> {/* 3. NOVA ROTA ADICIONADA */}
-                                    <Route path="fornecedores" element={<FornecedoresPage />} /> {/* 3. NOVA ROTA */}
+                                    <Route path="fornecedores" element={<FornecedoresPage />} /> 
                                      <Route path="visibilidade" element={<VisibilidadePage onPedidoClick={handlePedidoClick} />} />
-                                    <Route path="configuracoes" element={<div>Página de Configurações em construção...</div>} />
+                                    <Route path="configuracoes" element={<ConfiguracoesPage />} /> 
                                 </Routes>
                             </div>
                         </main>
