@@ -3,7 +3,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.jsx";
 import Chart from 'react-apexcharts';
-import { useQuery } from '@tanstack/react-query'; // IMPORTAR useQuery
+import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from "../components/ui/Skeleton.jsx"; // 1. Importar o Skeleton
 import { formatCurrency } from '../lib/utils.js';
 import ProximosAgendamentos from './dashboard/ProximosAgendamentos.js';
 import PedidosPendentes from './dashboard/PedidosPendentes.js';
@@ -41,11 +42,22 @@ const fetchTopClientes = async () => {
 // --- Subcomponentes Refatorados ---
 
 function StatCard({ title, value, isLoading }) {
-    if (isLoading) return <div className="animate-pulse"><Card><CardHeader><CardTitle className="h-4 bg-gray-200 rounded w-3/4"></CardTitle></CardHeader><CardContent><div className="h-8 bg-gray-300 rounded w-1/2"></div></CardContent></Card></div>;
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-8 w-1/2" />
+                </CardContent>
+            </Card>
+        );
+    }
     return (
         <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle></CardHeader>
-            <CardContent><p className="text-2xl font-bold text-gray-800">{value}</p></CardContent>
+            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle></CardHeader>
+            <CardContent><p className="text-2xl font-bold text-foreground">{value}</p></CardContent>
         </Card>
     );
 }
@@ -53,7 +65,7 @@ function StatCard({ title, value, isLoading }) {
 function GraficoFinanceiroApex() {
     const { data, isLoading, error } = useQuery({ queryKey: ['historicoFinanceiro'], queryFn: fetchHistoricoFinanceiro });
 
-    if (isLoading) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p>A carregar gráfico...</p></CardContent></Card>;
+    if (isLoading) return <Skeleton className="h-[360px] w-full" />;
     if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-red-500">{error.message}</p></CardContent></Card>;
 
     const series = [
@@ -89,7 +101,7 @@ function GraficoFinanceiroApex() {
 function GraficoTopServicosApex() {
     const { data, isLoading, error } = useQuery({ queryKey: ['topServicos'], queryFn: fetchTopServicos });
 
-    if (isLoading) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p>A carregar gráfico...</p></CardContent></Card>;
+    if (isLoading) return <Skeleton className="h-[360px] w-full" />;
     if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-red-500">{error.message}</p></CardContent></Card>;
 
     const series = data?.map(item => item.value) || [];
@@ -120,14 +132,25 @@ function RankingTopClientes() {
     const { data: clientes, isLoading, error } = useQuery({ queryKey: ['topClientes'], queryFn: fetchTopClientes });
 
     const renderContent = () => {
-        if (isLoading) return <div className="text-center text-gray-500">A carregar...</div>;
+        if (isLoading) {
+            return (
+                <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                            <Skeleton className="h-5 w-3/4" />
+                            <Skeleton className="h-5 w-1/4" />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
         if (error) return <div className="text-center text-red-500">{error.message}</div>;
-        if (!clientes || clientes.length === 0) return <div className="text-center text-gray-500">Nenhum dado de faturamento de clientes encontrado.</div>;
+        if (!clientes || clientes.length === 0) return <div className="text-center text-muted-foreground">Nenhum dado de faturamento de clientes encontrado.</div>;
         
         return (
             <ul className="space-y-4">{clientes.map((cliente, index) => (
                 <li key={cliente.clienteId} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center"><span className="font-bold text-gray-500 w-6">{index + 1}.</span><span className="font-medium text-gray-800">{cliente.nome}</span></div>
+                    <div className="flex items-center"><span className="font-bold text-muted-foreground w-6">{index + 1}.</span><span className="font-medium text-foreground">{cliente.nome}</span></div>
                     <span className="font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-md">{formatCurrency(cliente.valor)}</span>
                 </li>))}
             </ul>

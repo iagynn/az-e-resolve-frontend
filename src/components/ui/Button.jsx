@@ -2,6 +2,7 @@
 import * as React from "react"
 import { cva } from "class-variance-authority";
 import { cn } from "../../lib/utils"
+import { Loader2 } from "./icons"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
@@ -29,12 +30,24 @@ const buttonVariants = cva(
   }
 )
 
-const Button = React.forwardRef(({ className, variant, size, ...props }, ref) => {
+const Button = React.forwardRef(({
+  className,
+  variant,
+  size,
+  isLoading, // 2. Adicionar a prop isLoading
+  children,  // 3. Adicionar children para renderizar o conteúdo do botão
+  ...props
+}, ref) => {
   return (
     <button
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
-      {...props} />
+      disabled={isLoading} // 4. Desabilitar o botão quando isLoading for true
+      {...props}
+    >
+      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+      {children}
+    </button>
   )
 })
 Button.displayName = "Button"
