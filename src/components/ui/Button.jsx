@@ -29,12 +29,26 @@ const buttonVariants = cva(
   }
 )
 
-const Button = React.forwardRef(({ className, variant, size, ...props }, ref) => {
+import { Loader2 } from "./Icons" // 1. Importar o ícone de loader
+
+const Button = React.forwardRef(({
+  className,
+  variant,
+  size,
+  isLoading, // 2. Adicionar a prop isLoading
+  children,  // 3. Adicionar children para renderizar o conteúdo do botão
+  ...props
+}, ref) => {
   return (
     <button
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
-      {...props} />
+      disabled={isLoading} // 4. Desabilitar o botão quando isLoading for true
+      {...props}
+    >
+      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+      {children}
+    </button>
   )
 })
 Button.displayName = "Button"
