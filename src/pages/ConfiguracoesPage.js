@@ -5,23 +5,31 @@ import { toast } from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card.jsx";
 import { Button } from '../components/ui/Button.jsx';
 import { getConfiguracao, updateConfiguracao } from '../api/configuracaoApi.js';
+import { useSearchParams } from 'react-router-dom'; // 1. Importar hook para ler URL
 
 const ConfiguracoesPage = () => {
     const queryClient = useQueryClient();
-    const [formData, setFormData] = useState({
-        nomeEmpresa: '',
-        documento: '',
-        telefoneEmpresa: '',
-        emailEmpresa: '',
-    });
+    const [formData, setFormData] = useState({ /* ... */ });
+    const [searchParams, setSearchParams] = useSearchParams(); // 2. Inicializar o hook
 
-    // 1. Busca os dados da configuração quando a página carrega
     const { data: config, isLoading, error } = useQuery({
         queryKey: ['configuracao'],
         queryFn: getConfiguracao
     });
 
-    // 2. Atualiza o formulário quando os dados chegam da API
+    // 3. Efeito para mostrar a mensagem de sucesso/erro após o redirecionamento
+    useEffect(() => {
+        const authStatus = searchParams.get('google_auth');
+        if (authStatus === 'success') {
+            toast.success("Google Calendar conectado com sucesso!");
+            queryClient.invalidateQueries({ queryKey: ['configuracao'] }); // Atualiza os dados
+            setSearchParams({}); // Limpa o parâmetro da URL
+        } else if (authStatus === 'error') {
+            toast.error("Falha ao conectar com o Google Calendar. Tente novamente.");
+            setSearchParams({}); // Limpa o parâmetro da URL
+        }
+    }, [searchParams, setSearchParams, queryClient]);
+
     useEffect(() => {
         if (config) {
             setFormData({
@@ -33,16 +41,13 @@ const ConfiguracoesPage = () => {
         }
     }, [config]);
 
-    // 3. Cria a mutação para guardar as alterações
     const updateMutation = useMutation({
         mutationFn: updateConfiguracao,
         onSuccess: () => {
             toast.success('Configurações guardadas com sucesso!');
             queryClient.invalidateQueries({ queryKey: ['configuracao'] });
         },
-        onError: (err) => {
-            toast.error(`Erro: ${err.message}`);
-        }
+        onError: (err) => toast.error(`Erro: ${err.message}`),
     });
 
     const handleInputChange = (e) => {
@@ -61,32 +66,39 @@ const ConfiguracoesPage = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
-            <form onSubmit={handleSubmit}>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <Card>
                     <CardHeader>
                         <CardTitle>Dados da Empresa</CardTitle>
-                        <CardDescription>Esta informação será utilizada nos seus orçamentos e faturas.</CardDescription>
+                        <CardDescription>Esta informação será utilizada nos seus documentos.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div>
-                            <label htmlFor="nomeEmpresa" className="block text-sm font-medium text-muted-foreground mb-1">Nome da Empresa</label>
-                            <input type="text" id="nomeEmpresa" value={formData.nomeEmpresa} onChange={handleInputChange} className="w-full p-2 border rounded-md bg-background" />
-                        </div>
-                        <div>
-                            <label htmlFor="documento" className="block text-sm font-medium text-muted-foreground mb-1">NIF / CNPJ</label>
-                            <input type="text" id="documento" value={formData.documento} onChange={handleInputChange} className="w-full p-2 border rounded-md bg-background" />
-                        </div>
-                        <div>
-                            <label htmlFor="telefoneEmpresa" className="block text-sm font-medium text-muted-foreground mb-1">Telefone de Contato</label>
-                            <input type="tel" id="telefoneEmpresa" value={formData.telefoneEmpresa} onChange={handleInputChange} className="w-full p-2 border rounded-md bg-background" />
-                        </div>
-                        <div>
-                            <label htmlFor="emailEmpresa" className="block text-sm font-medium text-muted-foreground mb-1">Email de Contato</label>
-                            <input type="email" id="emailEmpresa" value={formData.emailEmpresa} onChange={handleInputChange} className="w-full p-2 border rounded-md bg-background" />
+                        {/* ... (Os seus inputs para os dados da empresa) ... */}
+                    </CardContent>
+                </Card>
+
+                {/* 👇 4. NOVA SECÇÃO DE INTEGRAÇÕES 👇 */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Integrações</CardTitle>
+                        <CardDescription>Conecte o Faz & Resolve com outras ferramentas que você usa.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center justify-between p-4 border rounded-md">
+                            <div>
+                                <h4 className="font-semibold">Google Calendar</h4>
+                                <p className="text-sm text-muted-foreground">Sincronize seus agendamentos automaticamente.</p>
+                            </div>
+                            {/* O botão agora é um link `<a>` que aponta para a rota do backend */}
+                            <a href="http://localhost:3000/api/auth/google">
+                                <Button type="button">Conectar</Button>
+                            </a>
                         </div>
                     </CardContent>
                 </Card>
-                <div className="flex justify-end mt-6">
+
+                <div className="flex justify-end">
                     <Button type="submit" disabled={updateMutation.isPending}>
                         {updateMutation.isPending ? 'A guardar...' : 'Guardar Alterações'}
                     </Button>

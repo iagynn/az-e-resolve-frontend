@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.js
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.jsx";
 import Chart from 'react-apexcharts';
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import ProximosAgendamentos from './dashboard/ProximosAgendamentos.js';
 import PedidosPendentes from './dashboard/PedidosPendentes.js';
 import PagamentosAtrasados from './dashboard/PagamentosAtrasados.js';
 import TopRegioes from './dashboard/TopRegioes.js';
-
+import { useTheme } from '../context/ThemeProvider';
 // --- Funções de Busca de Dados ---
 // Criamos funções separadas e exportáveis para cada busca de dados.
 
@@ -62,67 +62,104 @@ function StatCard({ title, value, isLoading }) {
     );
 }
 
+const getCssVar = (varName) => {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+};
+
 function GraficoFinanceiroApex() {
+    const { theme } = useTheme();
     const { data, isLoading, error } = useQuery({ queryKey: ['historicoFinanceiro'], queryFn: fetchHistoricoFinanceiro });
 
-    if (isLoading) return <Skeleton className="h-[360px] w-full" />;
-    if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-red-500">{error.message}</p></CardContent></Card>;
+    const options = useMemo(() => {
+        const primaryColor = `hsl(${getCssVar('--primary')})`;
+        const destructiveColor = `hsl(${getCssVar('--destructive')})`;
+        const foregroundColor = `hsl(${getCssVar('--foreground')})`;
+        const mutedColor = `hsl(${getCssVar('--muted-foreground')})`;
+
+        return {
+            chart: {
+                type: 'area',
+                height: '100%',
+                toolbar: { show: false },
+                fontFamily: 'Inter, sans-serif',
+                foreColor: mutedColor, // Cor do texto dos eixos
+            },
+            stroke: { curve: 'smooth', width: 2 },
+            colors: [primaryColor, destructiveColor, '#22c55e'],
+            dataLabels: { enabled: false },
+            grid: {
+                borderColor: `hsl(${getCssVar('--border')})`,
+                strokeDashArray: 4,
+                xaxis: { lines: { show: true } },
+                yaxis: { lines: { show: true } },
+            },
+            xaxis: {
+                categories: data?.map(item => item.mes) || [],
+                labels: { style: { fontWeight: 500 } },
+            },
+            yaxis: {
+                labels: { formatter: (value) => formatCurrency(value) },
+            },
+            tooltip: {
+                theme: theme, // Adapta o tooltip ao tema
+                y: { formatter: (value) => formatCurrency(value) },
+                style: { fontSize: '12px' },
+            },
+            legend: {
+                labels: { colors: foregroundColor }, // Cor do texto da legenda
+                fontWeight: 500,
+            }
+        };
+    }, [theme, data]);
+
+    if (isLoading) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p>A carregar...</p></CardContent></Card>;
+    if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-destructive">{error.message}</p></CardContent></Card>;
 
     const series = [
         { name: 'Faturamento', data: data?.map(item => item.faturamento) || [] },
         { name: 'Despesas', data: data?.map(item => item.despesas) || [] },
         { name: 'Lucro', data: data?.map(item => item.lucro) || [] }
     ];
-     const options = {
-        chart: { type: 'area', height: '100%', toolbar: { show: false } },
-        stroke: { curve: 'smooth', width: 2 },
-        // 👇 CORES ATUALIZADAS AQUI 👇
-        colors: ['hsl(var(--primary))', 'hsl(var(--destructive))', '#22c55e'], // Azul, Vermelho e um Verde para o lucro
-        xaxis: { categories: data?.map(item => item.mes) || [] },
-        yaxis: { labels: { formatter: (value) => formatCurrency(value) } },
-        tooltip: { y: { formatter: (value) => formatCurrency(value) } },
-        dataLabels: { enabled: false }
-    };
-
-    return (
+     return (
         <Card>
             <CardHeader><CardTitle>Análise Financeira (Últimos 6 Meses)</CardTitle></CardHeader>
             <CardContent>
-                {data && data.length > 0 ? (
-                    <Chart options={options} series={series} type="area" width="100%" height="300" />
-                ) : (
-                    <div className="flex justify-center items-center h-[300px]"><p className="text-gray-500">Não há dados para exibir.</p></div>
-                )}
+                {data && data.length > 0 ? <Chart options={options} series={series} type="area" width="100%" height="300" /> : <div className="flex justify-center items-center h-[300px]"><p className="text-muted-foreground">Não há dados para exibir.</p></div>}
             </CardContent>
         </Card>
     );
 }
 
 function GraficoTopServicosApex() {
+    const { theme } = useTheme();
     const { data, isLoading, error } = useQuery({ queryKey: ['topServicos'], queryFn: fetchTopServicos });
 
-    if (isLoading) return <Skeleton className="h-[360px] w-full" />;
-    if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-red-500">{error.message}</p></CardContent></Card>;
+    const options = useMemo(() => {
+        const foregroundColor = `hsl(${getCssVar('--foreground')})`;
+        return {
+            chart: { type: 'donut', height: '100%', fontFamily: 'Inter, sans-serif', foreColor: foregroundColor },
+            labels: data?.map(item => item.name) || [],
+            legend: { position: 'bottom', fontWeight: 500 },
+            colors: ['hsl(var(--primary))', '#3b82f6', '#64748b', '#94a3b8', '#cbd5e1'],
+            tooltip: { theme: theme, y: { formatter: (value) => `${value} pedidos` } },
+            dataLabels: {
+                style: {
+                    colors: theme === 'dark' ? ['#fff'] : ['#333']
+                }
+            }
+        };
+    }, [theme, data]);
+
+    if (isLoading) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p>A carregar...</p></CardContent></Card>;
+    if (error) return <Card className="flex items-center justify-center h-full min-h-[360px]"><CardContent><p className="text-destructive">{error.message}</p></CardContent></Card>;
 
     const series = data?.map(item => item.value) || [];
- const options = {
-        chart: { type: 'donut', height: '100%' },
-        labels: data?.map(item => item.name) || [],
-        legend: { position: 'bottom' },
-        // 👇 CORES ATUALIZADAS AQUI 👇
-        colors: ['hsl(var(--primary))', 'hsl(var(--secondary-foreground))', 'hsl(var(--muted-foreground))', '#3b82f6', '#64748b'],
-        tooltip: { y: { formatter: (value) => `${value} pedidos` } }
-    };
 
     return (
         <Card>
             <CardHeader><CardTitle>Serviços Mais Realizados</CardTitle></CardHeader>
             <CardContent>
-                {data && data.length > 0 ? (
-                    <Chart options={options} series={series} type="donut" width="100%" height="300" />
-                ) : (
-                    <div className="flex justify-center items-center h-[300px]"><p className="text-gray-500">Nenhum serviço finalizado.</p></div>
-                )}
+                {data && data.length > 0 ? <Chart options={options} series={series} type="donut" width="100%" height="300" /> : <div className="flex justify-center items-center h-[300px]"><p className="text-muted-foreground">Nenhum serviço finalizado.</p></div>}
             </CardContent>
         </Card>
     );

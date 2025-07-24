@@ -20,6 +20,8 @@ import PedidoDetalheClientePage from './pages/Cliente/PedidoDetalheClientePage.j
 import AtivarContaPage from './pages/Public/AtivarContaPage.js';
 import StatusPedidoPage from './pages/Public/StatusPedidoPage.js'; // Assumindo que você irá criar este
 import TalentosPage from './pages/TalentosPage.js'; 
+import { ThemeProvider } from './context/ThemeProvider';
+import { ThemeToggle } from './components/ThemeToggle';
 
 
 // Componentes
@@ -71,6 +73,7 @@ export default function App() {
     );
 
     return (
+          <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
         <BrowserRouter>
             <Toaster position="top-right" toastOptions={{ success: { style: { background: '#22c55e', color: 'white' } }, error: { style: { background: '#ef4444', color: 'white' } } }} />
             <Routes>
@@ -85,6 +88,7 @@ export default function App() {
                     <aside className={`bg-background text-foreground transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}> {/* 2. Fundo branco para a sidebar */}
                         <div className="flex items-center justify-between p-4 border-b">
                             <h1 className={`text-xl font-bold text-primary ${!isSidebarOpen && 'hidden'}`}>Faz&Resolve</h1> {/* 3. Usando a cor primária para o título */}
+                            <ThemeToggle /> {/* <-- BOTÃO ADICIONADO */}
                             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-lg text-muted-foreground hover:bg-accent">
                                 {isSidebarOpen ? <LayoutDashboard className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                             </button>
@@ -130,6 +134,7 @@ export default function App() {
                 } />
             </Routes>
         </BrowserRouter>
+        </ThemeProvider>
     );
 }
  
