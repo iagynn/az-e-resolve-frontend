@@ -1,94 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+// src/pages/Cliente/ClienteDashboardPage.js
 
-const ClienteDashboardPage = () => {
-    const navigate = useNavigate();
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { formatCurrency } from '../../lib/utils'; // Assumindo que a função está em lib/utils.js
 
-    // Estados para guardar os pedidos, o estado de carregamento e erros
-    const [pedidos, setPedidos] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+// --- Função da API ---
+const fetchClientePedidos = async () => {
+    const token = localStorage.getItem('clienteToken');
+    const response = await fetch('http://localhost:3000/api/portal-cliente/meus-pedidos', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+        throw new Error('Não foi possível buscar os seus pedidos.');
+    }
+    return response.json();
+};
 
-    useEffect(() => {
-        // Função para buscar os dados
-        const fetchPedidos = async () => {
-            // Pega o token do localStorage
-            const token = localStorage.getItem('clienteToken');
-
-            if (!token) {
-                setError("Sessão inválida. Por favor, faça login novamente.");
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                const response = await fetch('http://localhost:3000/api/portal-cliente/pedidos', {
-                    headers: {
-                        // Enviamos o token no cabeçalho para provar quem somos
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Não foi possível carregar os seus pedidos.');
-                }
-
-                const data = await response.json();
-                setPedidos(data);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchPedidos();
-    }, []); // O array vazio [] garante que isto só roda uma vez
-
-    const handleLogout = () => {
-        localStorage.removeItem('clienteToken');
-        navigate('/cliente/login');
+// --- Subcomponente para o Badge de Status ---
+const StatusBadge = ({ status }) => {
+    const statusStyles = {
+        'Pendente': 'bg-yellow-100 text-yellow-800',
+        'Aceito': 'bg-blue-100 text-blue-800',
+        'Agendado': 'bg-indigo-100 text-indigo-800',
+        'Finalizado': 'bg-green-100 text-green-800',
+        'Rejeitado': 'bg-red-100 text-red-800',
     };
+    return (
+        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+            {status}
+        </span>
+    );
+};
+
+// --- Componente Principal ---
+const ClienteDashboardPage = () => {
+    const { data: pedidos, isLoading, error, isSuccess } = useQuery({
+        queryKey: ['clientePedidos'],
+        queryFn: fetchClientePedidos
+    });
 
     return (
-        <div style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Painel do Cliente</h1>
-                <button 
-                    onClick={handleLogout} 
-                    style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '4px', background: '#6b7280', color: 'white', cursor: 'pointer' }}
-                >
-                    Sair
-                </button>
-            </div>
-            <p>Bem-vindo ao seu portal de acompanhamento!</p>
-            
-            <div style={{ marginTop: '2rem' }}>
-                <h2 style={{ marginBottom: '1rem' }}>Meus Pedidos</h2>
-                {isLoading && <p>A carregar os seus pedidos...</p>}
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                {!isLoading && !error && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {pedidos.length > 0 ? (
-                           pedidos.map(pedido => (
-    <Link 
-        key={pedido._id} 
-        to={`/cliente/pedidos/${pedido._id}`}
-        className="block p-4 bg-gray-100 rounded-lg border-l-4 border-blue-500 hover:bg-gray-200 transition-colors no-underline text-black"
-    >
-        <div className="flex justify-between items-center">
-            <p style={{ fontWeight: 'bold' }}>Pedido #{pedido.shortId}</p>
-            <span className="text-sm font-semibold bg-blue-200 text-blue-800 px-3 py-1 rounded-full">{pedido.status}</span>
-        </div>
-        <p className="mt-2 text-gray-600">{pedido.descricao.slice(0, 150)}...</p>
-    </Link>
-))
-                        ) : (
-                            <p>Você ainda não tem nenhum pedido registado.</p>
-                        )}
+        <div className="min-h-screen bg-secondary">
+            <header className="bg-background border-b p-4">
+                <div className="container mx-auto">
+                    <h1 className="text-xl font-bold text-primary">Faz & Resolve - Portal do Cliente</h1>
+                </div>
+            </header>
+            <main className="container mx-auto p-4 md:p-6 space-y-6">
+                <div className="text-center md:text-left">
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground">Seus Pedidos</h2>
+                    <p className="text-muted-foreground">Acompanhe o estado de todos os seus serviços solicitados.</p>
+                </div>
+
+                {isLoading && <p className="text-center text-muted-foreground">A carregar os seus pedidos...</p>}
+                {error && <p className="text-center text-destructive">{error.message}</p>}
+
+                {isSuccess && pedidos.length > 0 && (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {pedidos.map((pedido) => (
+                            <Link to={`/cliente/pedidos/${pedido._id}`} key={pedido._id} className="block hover:-translate-y-1 transition-transform duration-200">
+                                <Card className="h-full flex flex-col">
+                                    <CardHeader>
+                                        <div className="flex justify-between items-center">
+                                            <CardTitle className="text-lg">Pedido #{pedido.shortId}</CardTitle>
+                                            <StatusBadge status={pedido.status} />
+                                        </div>
+                                        <CardDescription>
+                                            Solicitado em: {new Date(pedido.data).toLocaleDateString('pt-BR')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-grow">
+                                        <p className="text-sm text-muted-foreground line-clamp-3">
+                                            {pedido.descricao}
+                                        </p>
+                                    </CardContent>
+                                    {pedido.valorProposto > 0 && (
+                                        <div className="p-6 pt-0 font-semibold text-right text-primary">
+                                            Valor: {formatCurrency(pedido.valorProposto)}
+                                        </div>
+                                    )}
+                                </Card>
+                            </Link>
+                        ))}
                     </div>
                 )}
-            </div>
+
+                {isSuccess && pedidos.length === 0 && (
+                    <div className="text-center text-muted-foreground py-16">
+                        <p className="text-lg">Você ainda não tem nenhum pedido registado.</p>
+                    </div>
+                )}
+            </main>
         </div>
     );
 };
