@@ -29,7 +29,7 @@ const buttonVariants = cva(
   }
 )
 
-import { Loader2 } from "./Icons" // 1. Importar o ícone de loader
+import { Loader2 } from "./icons" // 1. Importar o ícone de loader
 
 const Button = React.forwardRef(({
   className,

@@ -28,7 +28,7 @@ import PedidoModal from './components/PedidoModal/PedidoModal.js';
 import {
     LayoutDashboard, List, Users, Settings, Menu, Calendar, Wallet,
     Archive, MapPin, ShoppingCart, Briefcase
-} from './components/ui/Icons.js';
+} from './components/ui/icons.js';
 import { buttonVariants } from './components/ui/Button'; // Importe as variantes
 import { cn } from './lib/utils'; // Importe a função cn
 
