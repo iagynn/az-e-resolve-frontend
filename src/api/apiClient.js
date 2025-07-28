@@ -1,50 +1,31 @@
-// src/api/pedidosApi.js
+import axios from 'axios';
 
-// --- ADICIONE ESTA NOVA FUNÇÃO ---
-export const deletePedido = async (pedidoId) => {
-    const response = await fetch(`http://localhost:3000/api/orcamentos/${pedidoId}`, {
-        method: 'DELETE',
-    });
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Não foi possível apagar o pedido.');
-    }
-    return { success: true };
-};
+// 1. Cria uma instância do Axios com a URL base da sua API.
+const apiClient = axios.create({
+  // Use uma variável de ambiente para a URL da API, ou o localhost como fallback.
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api', 
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-// Função para atualizar o status de um pedido
-export const updatePedidoStatus = async ({ pedidoId, newStatus }) => {
-    const response = await fetch(`http://localhost:3000/api/orcamentos/${pedidoId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-    });
-    if (!response.ok) {
-        throw new Error('Falha ao atualizar o status do pedido.');
+// 2. (Opcional, mas recomendado) Adiciona um "interceptor" para incluir o token de autenticação
+//    em todas as requisições, caso ele exista no localStorage.
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token'); // Ou de onde quer que você pegue o token
+    if (token) {
+      // Adiciona o cabeçalho de autorização
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return response.json();
-};
+    return config;
+  },
+  (error) => {
+    // Trata erros na configuração da requisição
+    return Promise.reject(error);
+  }
+);
 
-// Função para submeter/atualizar um orçamento
-export const submitOrcamento = async ({ pedidoId, valorProposto }) => {
-    const response = await fetch(`http://localhost:3000/api/orcamentos/${pedidoId}/submit`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valorProposto }),
-    });
-    if (!response.ok) {
-        throw new Error("Falha ao enviar o orçamento.");
-    }
-    return response.json();
-};
-export const marcarComoPago = async (pedidoId) => {
-    const response = await fetch(`http://localhost:3000/api/orcamentos/${pedidoId}/marcar-pago`, {
-        method: 'POST',
-    });
-    if (!response.ok) {
-        throw new Error('Não foi possível marcar o pedido como pago.');
-    }
-    return response.json();
-};
-
-// Pode adicionar aqui outras funções de API (schedule, addMaterial, etc.) no futuro
+// 3. Exporta a instância configurada como padrão.
+//    Esta é a linha mais importante para resolver os erros de importação.
+export default apiClient;
