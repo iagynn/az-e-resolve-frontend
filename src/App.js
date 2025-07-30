@@ -22,6 +22,7 @@ import StatusPedidoPage from './pages/Public/StatusPedidoPage.js'; // Assumindo 
 import TalentosPage from './pages/TalentosPage.js'; 
 import { ThemeProvider } from './context/ThemeProvider';
 import { ThemeToggle } from './components/ThemeToggle';
+import EstoqueInteligentePage from './pages/EstoqueInteligentePage';
 
 
 // Componentes
@@ -82,7 +83,7 @@ export default function App() {
                 <Route path="/ativar-conta/:token" element={<AtivarContaPage />} />
                 <Route path="/cliente/dashboard" element={<ClienteProtectedRoute><ClienteDashboardPage /></ClienteProtectedRoute>} />
                 <Route path="/cliente/pedidos/:id" element={<ClienteProtectedRoute><PedidoDetalheClientePage /></ClienteProtectedRoute>} />
-                
+                <Route path="/estoque-inteligente" element={<EstoqueInteligentePage />} />
                  <Route path="/*" element={
                 <div className="flex h-screen bg-secondary font-sans"> {/* 1. Fundo cinza suave para toda a área */}
                     <aside className={`bg-background text-foreground transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}> {/* 2. Fundo branco para a sidebar */}
